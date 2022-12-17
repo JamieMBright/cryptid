@@ -1,0 +1,26 @@
+[tool.poetry]
+name = "cryptids"
+version = "0.0.1"
+description = "Cryptids the game."
+authors = [
+    "Jamie Bright <jamiebright1@gmail.com>"
+]
+readme = "readme.md"
+repository = "https://github.com/JamieMBright/cryptid"
+
+[tool.poetry.dependencies]
+pygame = "*"
+spyder = "*"
+numpy = "^1.22.4"
+pandas = "^1.4.2"
+pytest = "*"
+
+[tool.poetry.dev-dependencies]
+pytest = "*"
+
+[build-system]
+requires = ["poetry-core>=1.1.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.build]
+generate-setup-file = false
