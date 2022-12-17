@@ -3,12 +3,13 @@ Cryptids.
 
 Run the Cryptids trading card game.
 """
+import sys
 import traceback
 
 import pygame
 
 from cryptids import settings
-from cryptids.game import Game
+from cryptids.game import GameWrapper
 
 # Initialize Pygame
 pygame.init()
@@ -21,7 +22,7 @@ pygame.display.set_caption(settings.WINTITLE)
 clock = pygame.time.Clock()
 
 # initialize the game
-game = Game()
+game = GameWrapper()
 
 
 def main():
@@ -36,24 +37,40 @@ def main():
             if event.type == pygame.QUIT:
                 # if so, end the script by breaking the while loop
                 running = False
+                # Quit Pygame
+                pygame.quit()
+                sys.exit()
 
-        # do stuff
+            # check if a click event occured
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                click_pos = event.pos
+            else:
+                click_pos = None
+
+            # check if any buttons were pressed
+            if event.type == pygame.KEYDOWN:
+                key_press = event.key
+            else:
+                key_press = None
+
+        # update display
         try:
-            game.render(screen)
+            game.render(screen, click_pos, key_press)
+
+        except SystemExit:
+            sys.exit()
+
         except BaseException:
             print(traceback.format_exc())
             running = False
-
-        # await interaction
+            pygame.quit()
+            sys.exit()
 
         # Update the display
         pygame.display.update()
 
-        # Limit frame rate to 60 FPS
+        # Limit frame rate to set FPS
         clock.tick(settings.CLOCKSPEED)
-
-    # Quit Pygame
-    pygame.quit()
 
 
 if __name__ == "__main__":
