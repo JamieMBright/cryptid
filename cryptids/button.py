@@ -11,7 +11,7 @@ from typing import Tuple
 
 import pygame
 
-from cryptids import settings
+from cryptids import settings, utils
 
 
 class Button():
@@ -65,13 +65,18 @@ class Button():
                  font_colour: (str, Tuple[int, int, int]) = settings.BUTTON_DEFAULT_FONTCOLOUR,
                  bg_colour: (str, Tuple[int, int, int]) = settings.BUTTON_DEFAULT_BGCOLOUR,
                  bg_colour_highlighted: (str, Tuple[int, int, int]) = settings.BUTTON_DEFAULT_BACKGROUND_HIGHLIGHTED,
+                 bg_colour_clicked: (str, Tuple[int, int, int]) = settings.BUTTON_DEFAULT_BACKGROUND_CLICKED,
                  bg_image: PathLike = None,
                  border_thickness: int = settings.BUTTON_DEFAULT_BORDER_THICKNESS,
                  border_colour: (str, Tuple[int, int, int]) = settings.BUTTON_DEFAULT_BORDER_COLOUR,
-                 border_colour_highlighted: (str, Tuple[int, int, int]) = settings.BUTTON_DEFAULT_BORDER_HIGHLIGHTED
+                 border_colour_highlighted: (str, Tuple[int, int, int]) = settings.BUTTON_DEFAULT_BORDER_HIGHLIGHTED,
+                 click_pos: Tuple[int, int] = None,
+                 toggleable: bool = False,
+                 toggle_hover_bg_colour: (str, Tuple[int, int, int]) = settings.BUTTON_DEFAULT_TOGGLE_HOVER_BG_COLOUR,
+                 toggled_bg_colour: (str, Tuple[int, int, int]) = settings.BUTTON_DEFAULT_TOGGLED_BG_COLOUR
                  ):
 
-        self.rect = pygame.Rect(x, y, width, height)
+        self.rect = pygame.Rect(x, y, width, height)  # left, top, width, height
         self.bg_colour = bg_colour
         self.bg_colour_highlighted = bg_colour_highlighted
         self.bg_image = bg_image
@@ -82,6 +87,13 @@ class Button():
         self.border_thickness = border_thickness
         self.border_colour = border_colour
         self.border_colour_highlighted = border_colour_highlighted
+        self.bg_colour_clicked = bg_colour_clicked
+        self.toggle_hover_bg_colour = toggle_hover_bg_colour
+        self.toggled_bg_colour = toggled_bg_colour
+        self.clicked = False
+        self.click_pos = click_pos
+        self.toggleable = toggleable
+        self.toggle = False
         self.surface = self._render()
 
     def _render(self):
@@ -89,12 +101,22 @@ class Button():
         surface = pygame.Surface((self.rect.width, self.rect.height))
 
         # get the background colour if highlighted
-        if self.is_mouse_hovering():
+        if self.is_mouse_hovering() and self.toggleable:
+            bg_col = self.toggle_hover_bg_colour
+        elif self.is_mouse_hovering():
             bg_col = self.bg_colour_highlighted
+        # else default background colour
         else:
-            bg_col = self.bg_colour
+            if self.toggle:
+                bg_color = self.toggled_bg_colour
+            else:
+                bg_col = self.bg_colour
+        # get the background cover if clicked
+        if self.was_clicked(self.click_pos):
+            print("button clicked")
+            bg_col = self.bg_colour_clicked
 
-        # Fill the surface with the background color or image
+            # Fill the surface with the background color or image
         if self.bg_image:
             surface.blit(self.bg_image, (0, 0))
         else:
@@ -119,9 +141,14 @@ class Button():
         """Return True if mouse clicked on button."""
         # get current mouse position
         if click_pos is not None:
-            if self.rect.collidepoint(pygame.mouse.get_pos()) and self.rect.collidepoint(click_pos):
+            if self.is_mouse_hovering() and self.rect.collidepoint(click_pos):
                 return True
             else:
                 return False
         else:
             return False
+
+    def toggle_button(self):
+        """Change toggle state."""
+        self.toggle = not self.toggle
+        return None

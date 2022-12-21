@@ -44,6 +44,7 @@ def main():
             # check if a click event occured
             if event.type == pygame.MOUSEBUTTONDOWN:
                 click_pos = event.pos
+                print(click_pos)
             else:
                 click_pos = None
 

@@ -6,6 +6,8 @@ Created on Sat Dec 17 02:46:54 2022
 """
 import pygame
 
+from cryptids import settings
+
 
 def reshape_keep_aspect(img, new_height=None, new_width=None):
     """
@@ -49,3 +51,36 @@ def reshape_keep_aspect(img, new_height=None, new_width=None):
 
     img = pygame.transform.scale(img, (int(new_width), int(new_height)))
     return img
+
+
+def delay_n_frames(num_frames: int = settings.DEFAULT_BUTTON_DELAY_ON_CLICK * settings.CLOCKSPEED):
+    """
+    Delay a fixed number of frames.
+
+    Parameters
+    ----------
+    num_frames : int
+        Number of framaes to delay.
+
+    Returns
+    -------
+    None.
+
+    """
+    print(f"delaying {num_frames} frames")
+    # initialaise the frame count
+    frame_count = 0
+    # initialise the infinite loop
+    running = True
+    # enter the event loop
+    while running and frame_count < num_frames:
+        # Check for quit events, which would override this delay
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                # break the loop if a quit event
+                running = False
+            # increment the frame count
+            frame_count += 1
+        # Update the display
+        pygame.display.update()
+    return None
