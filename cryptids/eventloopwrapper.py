@@ -259,6 +259,11 @@ class GameWrapper(object):
         y = int(get.WINHEIGHT * get.HOME_BUTTON_Y_REL - get.BUTTON_DEFAULT_HEIGHT // 2)
         back_button = Button(text="BACK", x=x, y=y, click_pos=click_pos)
         screen.blit(back_button.surface, (x, y))
+        # start game button -> move to main game loop
+        x = get.X50 - get.BUTTON_DEFAULT_WIDTH // 2
+        y = int(get.WINHEIGHT * get.HOME_BUTTON_Y_REL - get.BUTTON_DEFAULT_HEIGHT // 2)
+        back_button = Button(text="BACK", x=x, y=y, click_pos=click_pos)
+        screen.blit(back_button.surface, (x, y))
 
         # click actions
         if back_button.was_clicked(click_pos):

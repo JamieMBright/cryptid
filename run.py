@@ -9,7 +9,7 @@ import traceback
 import pygame
 
 from cryptids import settings
-from cryptids.game import GameWrapper
+from cryptids.eventloopwrapper import GameWrapper
 
 # Initialize Pygame
 pygame.init()
