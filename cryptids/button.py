@@ -6,12 +6,17 @@ Created on Sat Dec 17 09:25:35 2022
 """
 
 """Button."""
+import logging
 from os import PathLike
 from typing import Tuple
 
 import pygame
 
 from cryptids import settings, utils
+from cryptids.loggingdecorator import log
+
+# get the logger
+logger = logging.getLogger(__name__)
 
 
 class Button():
@@ -108,12 +113,11 @@ class Button():
         # else default background colour
         else:
             if self.toggle:
-                bg_color = self.toggled_bg_colour
+                bg_col = self.toggled_bg_colour
             else:
                 bg_col = self.bg_colour
         # get the background cover if clicked
         if self.was_clicked(self.click_pos):
-            print("button clicked")
             bg_col = self.bg_colour_clicked
 
             # Fill the surface with the background color or image

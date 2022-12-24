@@ -10,7 +10,7 @@ def test_card():
     """Test the creation of the Card class."""
     card = Card("Blue-Eyes White Dragon", "Monster", "Light", 8, 3000, 2500, "Normal", "")
 
-    assert card.name == "Blue-Eyes White Dragon"
+    assert card.name == "1"
     assert card.card_type == "Monster"
     assert card.attribute == "Light"
     assert card.level == 8
@@ -21,7 +21,7 @@ def test_card():
 
 
 def test_render():
-    card = Card("Blue-Eyes White Dragon", "Monster", "Light", 8, 3000, 2500, "Normal", "")
+    card = Card("1", "Monster", "Light", 8, 3000, 2500, "Normal", "")
     surface = ""
     x, y = 50, 50
     card.render(surface, x, y)

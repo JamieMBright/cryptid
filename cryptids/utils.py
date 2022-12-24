@@ -1,12 +1,11 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sat Dec 17 02:46:54 2022
-
-@author: jamie
-"""
+"""Utilities for the Cryptids game."""
+import logging
 import pygame
 
 from cryptids import settings
+
+# get the logger
+logger = logging.getLogger(__name__)
 
 
 def reshape_keep_aspect(img, new_height=None, new_width=None):
@@ -67,7 +66,6 @@ def delay_n_frames(num_frames: int = settings.DEFAULT_BUTTON_DELAY_ON_CLICK * se
     None.
 
     """
-    print(f"delaying {num_frames} frames")
     # initialaise the frame count
     frame_count = 0
     # initialise the infinite loop

@@ -9,6 +9,7 @@ from functools import wraps
 import logging
 import os
 import socket
+import sys
 from types import ModuleType
 from typing import List
 from operator import attrgetter
@@ -166,6 +167,13 @@ def build_logger(logging_level: int = logging.DEBUG,
                         level=logging_level)
 
     logger = logging.getLogger(__name__)
+    # add a formatter handler
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setLevel(logging.DEBUG)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
     # write some opening text into the logger that details the core information.
     # note that it is not straight forward to write directly into the log file
     # without passing in that info as an error format. However, if we write in
@@ -245,7 +253,7 @@ def log(func):
 
             except BaseException:
                 logger.exception(f"function {func.__name__} called with args: {args} and kwargs: {kwargs}")
-                print("We interrupt this program to annoy you and make things generally irritating..")
+                print(f"Fuck. Something went wrong inside {func.__name__}.")
                 raise
                 return None
         return wrapper
