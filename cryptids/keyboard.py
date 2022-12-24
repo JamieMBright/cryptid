@@ -63,4 +63,4 @@ def key_interpreter(key):
         return schemer[key]
     else:
         logger.debug(f"Unrecognised key with pygame code: {key}.")
-        return key
+        return "WTF?!"

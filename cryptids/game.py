@@ -33,6 +33,7 @@ class GameWrapper(object):
         self.outro_counter = 0
         self.focus_pos = [0, 0]
         self.letters = []
+        self.fresh_screen = True
 
     def render(self, screen, click_pos, key_press) -> object:
         """Select the game status to render."""
@@ -147,7 +148,7 @@ class GameWrapper(object):
 
         # set button -> move to settings screen
         x = get.X50 - get.BUTTON_DEFAULT_WIDTH
-        settings_button = Button(text="SETTINGS", x=x, y=y, width=int(get.BUTTON_DEFAULT_WIDTH * 2), click_pos=click_pos)
+        settings_button = Button(text="SETTINGS", x=x, y=y, click_pos=click_pos)
         screen.blit(settings_button.surface, (x, y))
 
         # quit button -> exit the game
@@ -157,13 +158,13 @@ class GameWrapper(object):
 
         # click actions
         if quit_button.was_clicked(click_pos):
-            utils.delay_n_frames()
+            utils.delay_n_frames(num_frames=get.DEFAULT_BUTTON_DELAY_ON_CLICK * get.CLOCKSPEED, clockspeed=get.CLOCKSPEED)
             _quit_button_action()
         elif play_button.was_clicked(click_pos):
-            utils.delay_n_frames()
+            utils.delay_n_frames(num_frames=get.DEFAULT_BUTTON_DELAY_ON_CLICK * get.CLOCKSPEED, clockspeed=get.CLOCKSPEED)
             _play_button_action()
         elif settings_button.was_clicked(click_pos):
-            utils.delay_n_frames()
+            utils.delay_n_frames(num_frames=get.DEFAULT_BUTTON_DELAY_ON_CLICK * get.CLOCKSPEED, clockspeed=get.CLOCKSPEED)
             _settings_button_action()
         # keyboard actions
         if key_press in get.K_BACK:
@@ -173,7 +174,6 @@ class GameWrapper(object):
 
     def _render_settings_screen(self, screen, click_pos, key_press):
         """Draw the set screen."""
-
         def _back_button_action():
             logger.info("SETTINGS SCREEN: Back button pressed.")
             self.game_status = get.STATUS_HOME
@@ -204,12 +204,12 @@ class GameWrapper(object):
         screen.blit(text, textRect)
         # easy toggleable -> store a setting
         x, y = get.X50, get.Y50
-        easy_button = Button(text="EASY", x=x, y=y, width=int(get.BUTTON_DEFAULT_WIDTH * 2), click_pos=click_pos, toggleable=True)
+        easy_button = Button(text="EASY", x=x, y=y, click_pos=click_pos, toggleable=True)
         screen.blit(easy_button.surface, (x, y))
 
         # click actions
         if back_button.was_clicked(click_pos):
-            utils.delay_n_frames()
+            utils.delay_n_frames(num_frames=get.DEFAULT_BUTTON_DELAY_ON_CLICK * get.CLOCKSPEED, clockspeed=get.CLOCKSPEED)
             _back_button_action()
         # keyboard actions
         if key_press in get.K_BACK:
@@ -270,7 +270,12 @@ class GameWrapper(object):
 
                     self.outro_counter += 1
 
-            case _:
+                else:
+                    logging.info("exiting")
+                    self.outro_sequence_position += 1
+                    self.outro_counter
+
+            case 3:
                 pygame.quit()
                 sys.exit()
 
@@ -301,18 +306,18 @@ class GameWrapper(object):
         back_button = Button(text="BACK", x=x, y=y, click_pos=click_pos)
         screen.blit(back_button.surface, (x, y))
         # start game button -> move to main game loop
-        x = get.X50 - get.BUTTON_DEFAULT_WIDTH // 2
+        x = get.X75 - get.BUTTON_DEFAULT_WIDTH // 2
         y = int(get.WINHEIGHT * get.HOME_BUTTON_Y_REL - get.BUTTON_DEFAULT_HEIGHT // 2)
         start_button = Button(text="START", x=x, y=y, click_pos=click_pos)
         screen.blit(start_button.surface, (x, y))
 
         # click actions
         if back_button.was_clicked(click_pos):
-            utils.delay_n_frames()
+            utils.delay_n_frames(num_frames=get.DEFAULT_BUTTON_DELAY_ON_CLICK * get.CLOCKSPEED, clockspeed=get.CLOCKSPEED)
             _back_button_action()
 
         if start_button.was_clicked(click_pos):
-            utils.delay_n_frames()
+            utils.delay_n_frames(num_frames=get.DEFAULT_BUTTON_DELAY_ON_CLICK * get.CLOCKSPEED, clockspeed=get.CLOCKSPEED)
             _start_button_action()
 
         # keyboard actions
@@ -327,7 +332,8 @@ class GameWrapper(object):
 
         # THIS IS THE GAME
         # draw background
-        if not self.fresh_screen:
+        if self.fresh_screen:
+            self._fresh_game_screen(screen)
 
             # process new changes
         x, y = pygame.mouse.get_pos()
@@ -346,15 +352,17 @@ class GameWrapper(object):
             _menu_button_action()
 
     def _fresh_game_screen(self, screen):
-
+        logger.info("Fresh game screen requested.")
         background(screen)
         for letter in self.letters:
             letter.draw(screen)
+        self.fresh_screen = False
 
     def _render_pause_menu(self, screen, click_pos, key_press):
         """Draw the pause menu."""
         def _resume_button_action():
             logger.info("PAUSE SCREEN: Resume button pressed.")
+            self.fresh_screen = True
             self.game_status = get.STATUS_GAMEPLAY
 
         def _quit_button_action():
@@ -362,39 +370,46 @@ class GameWrapper(object):
             self.game_status = get.STATUS_HOME
 
         # make a transparent background
-        x, y = get.WINWIDTH, get.WINHEIGHT
-        xoffset = x * (1 - get.PAUSE_MENU_SCALE)
-        yoffset = y * (1 - get.PAUSE_MENU_SCALE)
-
+        xoffset = (get.WINWIDTH - get.PAUSE_WINWIDTH) // 2
+        yoffset = (get.WINHEIGHT - get.PAUSE_WINHEIGHT) // 2
         menu = pygame.Surface((get.PAUSE_WINWIDTH, get.PAUSE_WINHEIGHT))
-        menu.set_alpha(get.PAUSE_MENU_TRANSPARENCY)
         menu.fill(get.PAUSE_MENU_BACKGROUND_COLOUR)
+        menu.set_alpha(get.PAUSE_MENU_BACKGROUND_TRANSPARENCY)
+        # pull up the logo
         logo = pygame.image.load(get.LOGO_SCREEN_IMAGE_PATH).convert_alpha()
-        logo = utils.reshape_keep_aspect(logo, new_height=get.WINHEIGHT * get.LOGO_HEIGHT_RELATIVE_TO_SCREEN_HEIGHT)
+        logo.fill((255, 255, 255, get.SETTINGS_LOGO_IMG_ALPHA), None, pygame.BLEND_RGBA_MULT)
+        logo = utils.reshape_keep_aspect(logo, new_height=get.PAUSE_WINHEIGHT * get.LOGO_HEIGHT_RELATIVE_TO_SCREEN_HEIGHT)
         logoRect = logo.get_rect()
-        logoRect.center = get.CENTRE
+        logoRect.center = get.PAUSE_CENTRE
         menu.blit(logo, logoRect)
         screen.blit(menu, (xoffset, yoffset))
 
+        # pause text
+        font = pygame.font.Font(get.PAUSE_SCREEN_PAUSE_TEXT_FONT, get.PAUSE_SCREEN_PAUSE_TEXT_FONTSIZE)
+        text = font.render("PAUSED", True, get.PAUSE_SCREEN_PAUSE_TEXT_COLOUR)
+        textRect = text.get_rect()
+        textRect.center = (get.X50, get.Y50)
+        screen.blit(text, textRect)
+
         # resume button -> return to game
-        x = get.PAUSE_X25 - get.BUTTON_DEFAULT_WIDTH
+        x = get.PAUSE_X25 - get.BUTTON_DEFAULT_WIDTH // 2
         y = get.PAUSE_Y75
         resume_button = Button(text="RESUME", x=x, y=y, click_pos=click_pos)
         screen.blit(resume_button.surface, (x, y))
 
         # quit button -> exit the game
-        x = get.PAUSE_Y75 - get.BUTTON_DEFAULT_WIDTH // 2
+        x = get.PAUSE_X75 - get.BUTTON_DEFAULT_WIDTH // 2
         y = get.PAUSE_Y75
         quit_button = Button(text="QUIT", x=x, y=y, click_pos=click_pos)
         screen.blit(quit_button.surface, (x, y))
 
         # click actions
         if resume_button.was_clicked(click_pos):
-            utils.delay_n_frames()
+            utils.delay_n_frames(num_frames=get.DEFAULT_BUTTON_DELAY_ON_CLICK * get.CLOCKSPEED, clockspeed=get.CLOCKSPEED)
             _resume_button_action()
 
         if quit_button.was_clicked(click_pos):
-            utils.delay_n_frames()
+            utils.delay_n_frames(num_frames=get.DEFAULT_BUTTON_DELAY_ON_CLICK * get.CLOCKSPEED, clockspeed=get.CLOCKSPEED)
             _quit_button_action()
 
 

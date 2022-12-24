@@ -1,11 +1,17 @@
 """Utilities for the Cryptids game."""
 import logging
 import pygame
+import sys
 
 from cryptids import settings
 
 # get the logger
 logger = logging.getLogger(__name__)
+handler = logging.StreamHandler(sys.stdout)
+handler.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
 
 
 def reshape_keep_aspect(img, new_height=None, new_width=None):
@@ -52,7 +58,8 @@ def reshape_keep_aspect(img, new_height=None, new_width=None):
     return img
 
 
-def delay_n_frames(num_frames: int = settings.DEFAULT_BUTTON_DELAY_ON_CLICK * settings.CLOCKSPEED):
+def delay_n_frames(num_frames: int,
+                   clockspeed: int):
     """
     Delay a fixed number of frames.
 
@@ -66,10 +73,14 @@ def delay_n_frames(num_frames: int = settings.DEFAULT_BUTTON_DELAY_ON_CLICK * se
     None.
 
     """
+    logger.debug(f"Delaying for {num_frames} frames")
     # initialaise the frame count
     frame_count = 0
     # initialise the infinite loop
     running = True
+
+    # Set up game clock
+    clock = pygame.time.Clock()
     # enter the event loop
     while running and frame_count < num_frames:
         # Check for quit events, which would override this delay
@@ -78,7 +89,11 @@ def delay_n_frames(num_frames: int = settings.DEFAULT_BUTTON_DELAY_ON_CLICK * se
                 # break the loop if a quit event
                 running = False
             # increment the frame count
-            frame_count += 1
+        frame_count += 1
+
+        # tick the clock
+        clock.tick(clockspeed)
         # Update the display
         pygame.display.update()
+    logger.debug("Finished delaying.")
     return None
