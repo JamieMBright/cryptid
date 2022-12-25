@@ -78,7 +78,8 @@ class Button():
                  click_pos: Tuple[int, int] = None,
                  toggleable: bool = False,
                  toggle_hover_bg_colour: (str, Tuple[int, int, int]) = settings.BUTTON_DEFAULT_TOGGLE_HOVER_BG_COLOUR,
-                 toggled_bg_colour: (str, Tuple[int, int, int]) = settings.BUTTON_DEFAULT_TOGGLED_BG_COLOUR
+                 toggled_bg_colour: (str, Tuple[int, int, int]) = settings.BUTTON_DEFAULT_TOGGLED_BG_COLOUR,
+                 click_event: bool = False
                  ):
 
         self.x = x
@@ -102,6 +103,7 @@ class Button():
         self.click_pos = click_pos
         self.toggleable = toggleable
         self.toggle = False
+        self.click_event = click_event
         self.surface = self._render()
 
     def _render(self):
@@ -154,7 +156,7 @@ class Button():
         """Return True if mouse clicked on button."""
         # get current mouse position
         if click_pos is not None:
-            if self.is_mouse_hovering() and self.box_surface_rect.collidepoint(click_pos):
+            if self.is_mouse_hovering() and self.box_surface_rect.collidepoint(click_pos) and self.click_event:
                 return True
             else:
                 return False

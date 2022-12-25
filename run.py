@@ -33,11 +33,11 @@ logger.info(f"Screen size set to {settings.WINTITLE}")
 clock = pygame.time.Clock()
 
 
-def render(game, screen, click_pos, key_press, running):
+def render(game, screen, click_pos, key_press, running, click_event):
     """Render the frame in safety."""
     # update display
     try:
-        game = game.render(screen, click_pos, key_press)
+        game = game.render(screen, click_pos, key_press, click_event)
 
     except SystemExit:
         logger.info("Force closing the game.")
@@ -64,6 +64,8 @@ def main():
     while running:
         # Handle events
         events = pygame.event.get()
+        # flags
+        click_event = False
         # if we have any, process them.
         if events:
             for event in events:
@@ -80,6 +82,7 @@ def main():
                 # check if a click event occured
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     click_pos = event.pos
+                    click_event = True
                     logger.debug(f"CLICK at {click_pos}")
                 else:
                     click_pos = None
@@ -92,11 +95,11 @@ def main():
                     key_press = None
 
                 # call the render for this event
-                game, running = render(game, screen, click_pos, key_press, running)
+                game, running = render(game, screen, click_pos, key_press, running, click_event)
 
         else:
             # call the render in absence of events
-            game, running = render(game, screen, click_pos, key_press, running)
+            game, running = render(game, screen, click_pos, key_press, running, click_event)
 
         # Update the display
         pygame.display.update()

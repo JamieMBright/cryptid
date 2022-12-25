@@ -95,5 +95,4 @@ def delay_n_frames(num_frames: int,
         clock.tick(clockspeed)
         # Update the display
         pygame.display.update()
-    logger.debug("Finished delaying.")
     return None

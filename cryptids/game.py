@@ -35,28 +35,28 @@ class GameWrapper(object):
         self.letters = []
         self.fresh_screen = True
 
-    def render(self, screen, click_pos, key_press) -> object:
+    def render(self, screen, click_pos, key_press, click_event: bool) -> object:
         """Select the game status to render."""
         match self.game_status:
             case get.STATUS_INTRO:
-                self._render_intro(screen, click_pos, key_press)
+                self._render_intro(screen, click_pos, key_press, click_event)
             case get.STATUS_HOME:
-                self._render_home_screen(screen, click_pos, key_press)
+                self._render_home_screen(screen, click_pos, key_press, click_event)
             case get.STATUS_SETTINGS:
-                self._render_settings_screen(screen, click_pos, key_press)
+                self._render_settings_screen(screen, click_pos, key_press, click_event)
             case get.STATUS_PREPLAY:
-                self._render_pre_play_mode(screen, click_pos, key_press)
+                self._render_pre_play_mode(screen, click_pos, key_press, click_event)
             case get.STATUS_OUTRO:
-                self._render_outro(screen, click_pos, key_press)
+                self._render_outro(screen, click_pos, key_press, click_event)
             case get.STATUS_GAMEPLAY:
-                self._render_gameplay(screen, click_pos, key_press)
+                self._render_gameplay(screen, click_pos, key_press, click_event)
             case get.STATUS_PAUSE:
-                self._render_pause_menu(screen, click_pos, key_press)
+                self._render_pause_menu(screen, click_pos, key_press, click_event)
             case _:
                 raise ValueError(f"Unrecognised game_status: {self.game_status}")
         return self
 
-    def _render_intro(self, screen, click_pos, key_press):
+    def _render_intro(self, screen, click_pos, key_press, click_event):
         """
         "Draw the intro.
 
@@ -118,7 +118,7 @@ class GameWrapper(object):
                     self.game_status = get.STATUS_HOME
         return self
 
-    def _render_home_screen(self, screen, click_pos, key_press):
+    def _render_home_screen(self, screen, click_pos, key_press, click_event):
         """Draw the home screen."""
         def _quit_button_action():
             logger.info("HOME SCREEN: Quit button pressed.")
@@ -143,27 +143,27 @@ class GameWrapper(object):
         # play button -> move to play screen
         x = get.X25 - get.BUTTON_DEFAULT_WIDTH // 2
         y = int(get.WINHEIGHT * get.HOME_BUTTON_Y_REL - get.BUTTON_DEFAULT_HEIGHT // 2)
-        play_button = Button(text="PLAY", x=x, y=y, click_pos=click_pos)
+        play_button = Button(text="PLAY", x=x, y=y, click_pos=click_pos, click_event=click_event)
         screen.blit(play_button.surface, (x, y))
 
         # set button -> move to settings screen
         x = get.X50 - get.BUTTON_DEFAULT_WIDTH
-        settings_button = Button(text="SETTINGS", x=x, y=y, click_pos=click_pos)
+        settings_button = Button(text="SETTINGS", x=x, y=y, click_pos=click_pos, click_event=click_event)
         screen.blit(settings_button.surface, (x, y))
 
         # quit button -> exit the game
         x = get.X75 - get.BUTTON_DEFAULT_WIDTH // 2
-        quit_button = Button(text="QUIT", x=x, y=y, click_pos=click_pos)
+        quit_button = Button(text="QUIT", x=x, y=y, click_pos=click_pos, click_event=click_event)
         screen.blit(quit_button.surface, (x, y))
 
         # click actions
-        if quit_button.was_clicked(click_pos):
+        if quit_button.was_clicked(click_pos) and click_event:
             utils.delay_n_frames(num_frames=get.DEFAULT_BUTTON_DELAY_ON_CLICK * get.CLOCKSPEED, clockspeed=get.CLOCKSPEED)
             _quit_button_action()
-        elif play_button.was_clicked(click_pos):
+        elif play_button.was_clicked(click_pos) and click_event:
             utils.delay_n_frames(num_frames=get.DEFAULT_BUTTON_DELAY_ON_CLICK * get.CLOCKSPEED, clockspeed=get.CLOCKSPEED)
             _play_button_action()
-        elif settings_button.was_clicked(click_pos):
+        elif settings_button.was_clicked(click_pos) and click_event:
             utils.delay_n_frames(num_frames=get.DEFAULT_BUTTON_DELAY_ON_CLICK * get.CLOCKSPEED, clockspeed=get.CLOCKSPEED)
             _settings_button_action()
         # keyboard actions
@@ -172,7 +172,7 @@ class GameWrapper(object):
         if key_press in get.K_ESC:
             _quit_button_action()
 
-    def _render_settings_screen(self, screen, click_pos, key_press):
+    def _render_settings_screen(self, screen, click_pos, key_press, click_event):
         """Draw the set screen."""
         def _back_button_action():
             logger.info("SETTINGS SCREEN: Back button pressed.")
@@ -191,7 +191,7 @@ class GameWrapper(object):
         # back button -> move to home screen
         x = get.X25 - get.BUTTON_DEFAULT_WIDTH // 2
         y = int(get.WINHEIGHT * get.HOME_BUTTON_Y_REL - get.BUTTON_DEFAULT_HEIGHT // 2)
-        back_button = Button(text="BACK", x=x, y=y, click_pos=click_pos)
+        back_button = Button(text="BACK", x=x, y=y, click_pos=click_pos, click_event=click_event)
         screen.blit(back_button.surface, (x, y))
 
         # option toggles
@@ -204,18 +204,18 @@ class GameWrapper(object):
         screen.blit(text, textRect)
         # easy toggleable -> store a setting
         x, y = get.X50, get.Y50
-        easy_button = Button(text="EASY", x=x, y=y, click_pos=click_pos, toggleable=True)
+        easy_button = Button(text="EASY", x=x, y=y, click_pos=click_pos, toggleable=True, click_event=click_event)
         screen.blit(easy_button.surface, (x, y))
 
         # click actions
-        if back_button.was_clicked(click_pos):
+        if back_button.was_clicked(click_pos) and click_event:
             utils.delay_n_frames(num_frames=get.DEFAULT_BUTTON_DELAY_ON_CLICK * get.CLOCKSPEED, clockspeed=get.CLOCKSPEED)
             _back_button_action()
         # keyboard actions
         if key_press in get.K_BACK:
             _back_button_action()
 
-    def _render_outro(self, screen, click_pos, key_press):
+    def _render_outro(self, screen, click_pos, key_press, click_event):
         """
         "Draw the outtro.
 
@@ -279,7 +279,7 @@ class GameWrapper(object):
                 pygame.quit()
                 sys.exit()
 
-    def _render_pre_play_mode(self, screen, click_pos, key_press):
+    def _render_pre_play_mode(self, screen, click_pos, key_press, click_event):
         """Draw the play screen."""
 
         def _back_button_action():
@@ -303,20 +303,20 @@ class GameWrapper(object):
         # back button -> move to home screen
         x = get.X25 - get.BUTTON_DEFAULT_WIDTH // 2
         y = int(get.WINHEIGHT * get.HOME_BUTTON_Y_REL - get.BUTTON_DEFAULT_HEIGHT // 2)
-        back_button = Button(text="BACK", x=x, y=y, click_pos=click_pos)
+        back_button = Button(text="BACK", x=x, y=y, click_pos=click_pos, click_event=click_event)
         screen.blit(back_button.surface, (x, y))
         # start game button -> move to main game loop
         x = get.X75 - get.BUTTON_DEFAULT_WIDTH // 2
         y = int(get.WINHEIGHT * get.HOME_BUTTON_Y_REL - get.BUTTON_DEFAULT_HEIGHT // 2)
-        start_button = Button(text="START", x=x, y=y, click_pos=click_pos)
+        start_button = Button(text="START", x=x, y=y, click_pos=click_pos, click_event=click_event)
         screen.blit(start_button.surface, (x, y))
 
         # click actions
-        if back_button.was_clicked(click_pos):
+        if back_button.was_clicked(click_pos) and click_event:
             utils.delay_n_frames(num_frames=get.DEFAULT_BUTTON_DELAY_ON_CLICK * get.CLOCKSPEED, clockspeed=get.CLOCKSPEED)
             _back_button_action()
 
-        if start_button.was_clicked(click_pos):
+        if start_button.was_clicked(click_pos) and click_event:
             utils.delay_n_frames(num_frames=get.DEFAULT_BUTTON_DELAY_ON_CLICK * get.CLOCKSPEED, clockspeed=get.CLOCKSPEED)
             _start_button_action()
 
@@ -324,7 +324,7 @@ class GameWrapper(object):
         if key_press in get.K_BACK:
             _back_button_action()
 
-    def _render_gameplay(self, screen, click_pos, key_press):
+    def _render_gameplay(self, screen, click_pos, key_press, click_event):
         """Draw gameplay."""
         def _menu_button_action():
             logger.info("GAMEPLAY SCREEN: Menu button pressed.")
@@ -358,7 +358,7 @@ class GameWrapper(object):
             letter.draw(screen)
         self.fresh_screen = False
 
-    def _render_pause_menu(self, screen, click_pos, key_press):
+    def _render_pause_menu(self, screen, click_pos, key_press, click_event):
         """Draw the pause menu."""
         def _resume_button_action():
             logger.info("PAUSE SCREEN: Resume button pressed.")
@@ -394,21 +394,21 @@ class GameWrapper(object):
         # resume button -> return to game
         x = get.PAUSE_X25 - get.BUTTON_DEFAULT_WIDTH // 2
         y = get.PAUSE_Y75
-        resume_button = Button(text="RESUME", x=x, y=y, click_pos=click_pos)
+        resume_button = Button(text="RESUME", x=x, y=y, click_pos=click_pos, click_event=click_event)
         screen.blit(resume_button.surface, (x, y))
 
         # quit button -> exit the game
         x = get.PAUSE_X75 - get.BUTTON_DEFAULT_WIDTH // 2
         y = get.PAUSE_Y75
-        quit_button = Button(text="QUIT", x=x, y=y, click_pos=click_pos)
+        quit_button = Button(text="QUIT", x=x, y=y, click_pos=click_pos, click_event=click_event)
         screen.blit(quit_button.surface, (x, y))
 
         # click actions
-        if resume_button.was_clicked(click_pos):
+        if resume_button.was_clicked(click_pos) and click_event:
             utils.delay_n_frames(num_frames=get.DEFAULT_BUTTON_DELAY_ON_CLICK * get.CLOCKSPEED, clockspeed=get.CLOCKSPEED)
             _resume_button_action()
 
-        if quit_button.was_clicked(click_pos):
+        if quit_button.was_clicked(click_pos) and click_event:
             utils.delay_n_frames(num_frames=get.DEFAULT_BUTTON_DELAY_ON_CLICK * get.CLOCKSPEED, clockspeed=get.CLOCKSPEED)
             _quit_button_action()
 
