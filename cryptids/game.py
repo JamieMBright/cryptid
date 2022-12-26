@@ -4,22 +4,25 @@ The main Game class.
 This controls all the sequences of the game and deals with their rendering.
 """
 import logging
-import sys
 from random import randint
+import sys
+import textwrap
 
 import pygame
 
 import cryptids.settings as get
 from cryptids import utils
 from cryptids.button import Button
+from cryptids import usermanagement
 
 # get the logger
 logger = logging.getLogger(__name__)
-handler = logging.StreamHandler(sys.stdout)
-handler.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-handler.setFormatter(formatter)
-logger.addHandler(handler)
+if get.VERBOSE:
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setLevel(logging.DEBUG)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
 
 
 class GameWrapper(object):
@@ -32,8 +35,11 @@ class GameWrapper(object):
         self.intro_counter = 0
         self.outro_counter = 0
         self.focus_pos = [0, 0]
-        self.letters = []
-        self.fresh_screen = True
+        self.login_success = False
+        self.game_started = False
+        self.username = None
+        self.username_text = get.DEFAULT_USERNAME
+        self.password_text = get.DEFAULT_PASSWORD
 
     def render(self, screen, click_pos, key_press, click_event: bool) -> object:
         """Select the game status to render."""
@@ -52,6 +58,8 @@ class GameWrapper(object):
                 self._render_gameplay(screen, click_pos, key_press, click_event)
             case get.STATUS_PAUSE:
                 self._render_pause_menu(screen, click_pos, key_press, click_event)
+            case get.STATUS_POPUP:
+                self._render_status_menu
             case _:
                 raise ValueError(f"Unrecognised game_status: {self.game_status}")
         return self
@@ -146,8 +154,8 @@ class GameWrapper(object):
         play_button = Button(text="PLAY", x=x, y=y, click_pos=click_pos, click_event=click_event)
         screen.blit(play_button.surface, (x, y))
 
-        # set button -> move to settings screen
-        x = get.X50 - get.BUTTON_DEFAULT_WIDTH
+        # settings button -> move to settings screen
+        x = get.X50 - get.BUTTON_DEFAULT_WIDTH // 2
         settings_button = Button(text="SETTINGS", x=x, y=y, click_pos=click_pos, click_event=click_event)
         screen.blit(settings_button.surface, (x, y))
 
@@ -288,7 +296,34 @@ class GameWrapper(object):
 
         def _start_button_action():
             logger.info("PRE-PLAY SCREEN: Start button pressed.")
-            self.game_status = get.STATUS_GAMEPLAY
+            if self.login_success:
+                self.game_status = get.STATUS_GAMEPLAY
+            else:
+                logger.info("PRE-PLAY SCREEN: Start button pressed without sucessful login")
+                self._render_popup(screen, click_pos, key_press, click_event, "Warning", "Cannot start the game without logging in. This is because we must be able to access your deck. Make an account and register your NFTs or log in to play.")
+
+                pass
+
+        def _login_button_action():
+            logger.info("PRE-PLAY SCREEN: login button pressed.")
+            # check login
+            (return_code, user) = usermanagement.load_user(self.username_text, self.password_text)
+            match return_code:
+                case 0:
+                    self.login_success = True
+                    self.username = self.username_text
+                case 1:
+                    logger.info("PRE-PLAY SCREEN: Login attempted but unrecognised username")
+                    self._render_popup(screen, click_pos, key_press, click_event, "Warning", "Unrecognised username")
+                case 2:
+                    logger.info("PRE-PLAY SCREEN: Login attempted but incorrect password")
+                    self._render_popup(screen, click_pos, key_press, click_event, "Warning", "Incorrect password")
+
+        def _logout_button_action():
+            logger.info("PRE-PLAY SCREEN: logout button pressed.")
+            self.login_success = False
+            self.username = None
+            self.password_text = get.DEFAULT_PASSWORD
 
         #  background imagery
         screen.fill(get.LOGO_SCREEN_BACKGROUND_COLOR)
@@ -305,11 +340,64 @@ class GameWrapper(object):
         y = int(get.WINHEIGHT * get.HOME_BUTTON_Y_REL - get.BUTTON_DEFAULT_HEIGHT // 2)
         back_button = Button(text="BACK", x=x, y=y, click_pos=click_pos, click_event=click_event)
         screen.blit(back_button.surface, (x, y))
+
         # start game button -> move to main game loop
         x = get.X75 - get.BUTTON_DEFAULT_WIDTH // 2
         y = int(get.WINHEIGHT * get.HOME_BUTTON_Y_REL - get.BUTTON_DEFAULT_HEIGHT // 2)
-        start_button = Button(text="START", x=x, y=y, click_pos=click_pos, click_event=click_event)
+        start_button = Button(text="START", x=x, y=y, click_pos=click_pos, click_event=click_event, access=self.login_success)
         screen.blit(start_button.surface, (x, y))
+
+        if self.login_success:
+            # LOGGED IN SCREEN
+
+            # login button -> move to main game loop
+            x = get.X50 - get.BUTTON_DEFAULT_WIDTH // 2
+            y = int(get.WINHEIGHT * get.HOME_BUTTON_Y_REL - get.BUTTON_DEFAULT_HEIGHT // 2)
+            log_button = Button(text="LOG OUT", x=x, y=y, click_pos=click_pos, click_event=click_event)
+            screen.blit(log_button.surface, (x, y))
+
+            x = 0
+            y = 0
+            logged_in_user_status = Button(text=f"Logged in as {self.username}.", x=x, y=y, click_pos=click_pos, click_event=click_event, access=False, width=get.WINWIDTH // 5, height=get.WINHEIGHT // 20, font_colour=get.RED)
+            screen.blit(logged_in_user_status.surface, (x, y))
+
+            # pick deck
+            self.user_deck_selection = []
+            # user settings
+        else:
+            # logout button -> move to main game loop
+            x = get.X50 - get.BUTTON_DEFAULT_WIDTH // 2
+            y = get.Y25
+            log_button = Button(text="LOG IN", x=x, y=y, click_pos=click_pos, click_event=click_event)
+            screen.blit(log_button.surface, (x, y))
+
+            # login text boxes
+            font = pygame.font.Font(get.PREPLAY_LOGIN_TEXT_FONT, get.PREPLAY_LOGIN_TEXT_FONTSIZE)
+            text = font.render("USERNAME:", True, get.PREPLAY_LOGIN_TEXT_COLOUR)
+            textRect = text.get_rect()
+            textRect.left = get.X25
+            textRect.top = get.Y50 - 25
+            screen.blit(text, textRect)
+            x, y = get.X50, get.Y50 - 25
+            username_textbox = Button(x=x, y=y, click_pos=click_pos, click_event=click_event, input_text=True, text=self.username_text)
+            screen.blit(username_textbox.surface, (x, y))
+
+            font = pygame.font.Font(get.PREPLAY_LOGIN_TEXT_FONT, get.PREPLAY_LOGIN_TEXT_FONTSIZE)
+            text = font.render("PASSWORD:", True, get.PREPLAY_LOGIN_TEXT_COLOUR)
+            textRect = text.get_rect()
+            textRect.left = get.X25
+            textRect.top = get.Y50 + 25
+            x, y = get.X50, get.Y50 + 25
+            password_textbox = Button(x=x, y=y, click_pos=click_pos, click_event=click_event, input_text=True, text=self.password_text, private=True)
+            screen.blit(password_textbox.surface, (x, y))
+            screen.blit(text, textRect)
+
+            # login specific buttons
+            if username_textbox.was_clicked(click_pos) and click_event:
+                self.username_text = username_textbox.text_input_action(screen)
+
+            if password_textbox.was_clicked(click_pos) and click_event:
+                self.password_text = password_textbox.text_input_action(screen)
 
         # click actions
         if back_button.was_clicked(click_pos) and click_event:
@@ -320,49 +408,23 @@ class GameWrapper(object):
             utils.delay_n_frames(num_frames=get.DEFAULT_BUTTON_DELAY_ON_CLICK * get.CLOCKSPEED, clockspeed=get.CLOCKSPEED)
             _start_button_action()
 
+        if log_button.was_clicked(click_pos) and click_event:
+            utils.delay_n_frames(num_frames=get.DEFAULT_BUTTON_DELAY_ON_CLICK * get.CLOCKSPEED, clockspeed=get.CLOCKSPEED)
+            if self.login_success:
+                # if we are logged in, we need the logout action
+                _logout_button_action()
+            else:
+                # if we are not logged in, we need the login button
+                _login_button_action()
+
         # keyboard actions
         if key_press in get.K_BACK:
             _back_button_action()
-
-    def _render_gameplay(self, screen, click_pos, key_press, click_event):
-        """Draw gameplay."""
-        def _menu_button_action():
-            logger.info("GAMEPLAY SCREEN: Menu button pressed.")
-            self.game_status = get.STATUS_PAUSE
-
-        # THIS IS THE GAME
-        # draw background
-        if self.fresh_screen:
-            self._fresh_game_screen(screen)
-
-            # process new changes
-        x, y = pygame.mouse.get_pos()
-        if key_press is not None:
-            # translate the latter to screen
-            rand_colour = (randint(0, 255), randint(0, 255), randint(0, 255))
-            font = pygame.font.Font(get.GAME_FONT, get.GAME_FONT_SIZE)
-            letter = Letter(x, y, rand_colour, font, key_press)
-            self.letters.append(letter)
-            logger.debug(f"letter with message {letter.msg} of colour {letter.col}")
-            letter.draw(screen)
-
-        # keyboard actions
-        # get pause menu
-        if key_press in get.K_ESC:
-            _menu_button_action()
-
-    def _fresh_game_screen(self, screen):
-        logger.info("Fresh game screen requested.")
-        background(screen)
-        for letter in self.letters:
-            letter.draw(screen)
-        self.fresh_screen = False
 
     def _render_pause_menu(self, screen, click_pos, key_press, click_event):
         """Draw the pause menu."""
         def _resume_button_action():
             logger.info("PAUSE SCREEN: Resume button pressed.")
-            self.fresh_screen = True
             self.game_status = get.STATUS_GAMEPLAY
 
         def _quit_button_action():
@@ -412,29 +474,189 @@ class GameWrapper(object):
             utils.delay_n_frames(num_frames=get.DEFAULT_BUTTON_DELAY_ON_CLICK * get.CLOCKSPEED, clockspeed=get.CLOCKSPEED)
             _quit_button_action()
 
+    def _render_popup(self, screen, click_pos, key_press, click_event, heading, body):
+        """Draw a popup."""
+        # set the loop break
+        ok_pressed = False
 
-def background(screen):
-    """Draw the background."""
-    screen.fill("Black")
+        # Set up game clock
+        clock = pygame.time.Clock()
+        # enter the event loop
+        while not ok_pressed:
+            events = pygame.event.get()
+            # flags
+            click_event = False
+            # if we have any, process them.
+            if events:
+                for event in events:
+
+                    # check if the window is closed
+                    if event.type == pygame.QUIT:
+                        logger.info("Quit event detected. Closing the game.")
+                        # if so, end the script by breaking the while loop
+                        ok_pressed = True
+                        # Quit Pygame
+                        pygame.quit()
+                        sys.exit()
+
+                    # check if a click event occured
+                    if event.type == pygame.MOUSEBUTTONDOWN:
+                        click_pos = event.pos
+                        click_event = True
+                        logger.debug(f"CLICK at {click_pos}")
+                    else:
+                        click_pos = None
+
+            # make a transparent background
+            xoffset = (get.WINWIDTH - get.POPUP_WINWIDTH) // 2
+            yoffset = (get.WINHEIGHT - get.POPUP_WINHEIGHT) // 2
+            popup = pygame.Surface((get.POPUP_WINWIDTH, get.POPUP_WINHEIGHT))
+            popup.fill(get.POPUP_MENU_BACKGROUND_COLOUR)
+            popup.set_alpha(get.POPUP_MENU_BACKGROUND_TRANSPARENCY)
+            # pull up the logo
+            logo = pygame.image.load(get.LOGO_SCREEN_IMAGE_PATH).convert_alpha()
+            logo.fill((255, 255, 255, get.SETTINGS_LOGO_IMG_ALPHA), None, pygame.BLEND_RGBA_MULT)
+            logo = utils.reshape_keep_aspect(logo, new_height=get.POPUP_WINHEIGHT * get.LOGO_HEIGHT_RELATIVE_TO_SCREEN_HEIGHT)
+            logoRect = logo.get_rect()
+            logoRect.center = get.POPUP_CENTRE
+            popup.blit(logo, logoRect)
+
+            # heading text
+            font = pygame.font.Font(get.POPUP_SCREEN_POPUP_HEADING_FONT, get.POPUP_SCREEN_POPUP_HEADING_FONTSIZE)
+            head = font.render(heading.upper(), True, get.POPUP_SCREEN_POPUP_HEADING_COLOUR)
+            headingRect = head.get_rect()
+            headingRect.center = (get.POPUP_X50, get.POPUP_HEADING_Y)
+            popup.blit(head, headingRect)
+
+            # body text
+            font = pygame.font.Font(get.POPUP_SCREEN_POPUP_BODY_FONT, get.POPUP_SCREEN_POPUP_BODY_FONTSIZE)
+            # wrap the text
+            pixel_width = get.POPUP_WINWIDTH - get.POPUP_BODY_TEXT_OFFSET
+            char_width = get.POPUP_SCREEN_POPUP_BODY_FONTSIZE * 0.8
+            lines = textwrap.wrap(body.upper(), width=pixel_width // char_width)
+            # make a surface per line
+            line_surfaces = []
+            for line in lines:
+                line_surfaces.append(font.render(line, True, get.POPUP_SCREEN_POPUP_BODY_COLOUR))
+            # find the box dimensions
+            box_width = max(line_surface.get_width() for line_surface in line_surfaces)
+            box_height = sum(line_surface.get_height() for line_surface in line_surfaces)
+            # build the text box
+            text_box = pygame.Surface((box_width, box_height))
+            # render the lines to the text box
+            y_offset = 0
+            for line_surface in line_surfaces:
+                text_box.blit(line_surface, (0, y_offset))
+                y_offset += line_surface.get_height()
+            # render the textbox to the popup
+            textRect = text_box.get_rect()
+            textRect.center = get.POPUP_CENTRE
+            popup.blit(text_box, textRect)
+
+            # ok button -> return to previous state
+            x = get.X50 - get.BUTTON_DEFAULT_WIDTH // 2
+            y = get.POPUP_WINHEIGHT - get.POPUP_BODY_TEXT_OFFSET
+            ok_button = Button(text="OK", x=x, y=y, click_pos=click_pos, click_event=click_event, width=get.BUTTON_DEFAULT_WIDTH)
+
+            screen.blit(popup, (xoffset, yoffset))
+            screen.blit(ok_button.surface, (x, y))
+
+            # click actions
+            if ok_button.was_clicked(click_pos) and click_event:
+                utils.delay_n_frames(num_frames=get.DEFAULT_BUTTON_DELAY_ON_CLICK * get.CLOCKSPEED, clockspeed=get.CLOCKSPEED)
+                ok_pressed = True
+
+            # tick the clock
+            clock.tick(get.CLOCKSPEED)
+            # Update the display
+            pygame.display.update()
+
+    def _render_gameplay(self, screen, click_pos, key_press, click_event):
+        """Draw gameplay."""
+        def _menu_button_action():
+            logger.info("GAMEPLAY SCREEN: Menu button pressed.")
+            self.game_status = get.STATUS_PAUSE
+
+        if not self.game_started:
+            # build the players
+            player1 = Player()
+            player1.load_deck()
+
+            player2 = Player()
+            # update the players
+
+            # build the game board
+
+            # process new changes
+        x, y = pygame.mouse.get_pos()
+        if key_press is not None:
+            pass
+
+        # draw the frame
+
+        # keyboard actions
+        # get pause menu
+        if key_press in get.K_ESC:
+            _menu_button_action()
 
 
-class Letter(object):
-    """A letter for testing a game."""
+class BoardGame():
+    """
+    The BoardGame class.
 
-    def __init__(self, x, y, col, font, msg):
-        self.x = x
-        self.y = y
-        self.col = col
-        self.font = font
-        self.msg = msg
-        self.textobj = font.render(msg, True, col)
+    The Boardgame class knows where all the cards are, and deals with rendering
+    the game assets and visuals. It also has awareness of the focus of the
+    player.
+    """
 
-    def draw(self, screen):
-        """Draw the letter."""
-        textRect = self.textobj.get_rect()
-        textRect.center = (self.x, self.y)
-        screen.blit(self.textobj, textRect)
+    def __init__(self, screen):
+        pass
 
-    def __repr__(self):
-        """Letter object when printed."""
-        return f"LETTER: {self.msg}, COL: {self.col}"
+    def _render_background(self, screen):
+        """Draw the background."""
+        screen.fill("Black")
+
+    def _render_cards_in_play(self):
+        """Draw all cards that are in play."""
+        pass
+
+    def _render_gui(self):
+        """Draw all the components of the game."""
+        # draw the health bars
+        # draw num of cards left
+        # draw the discard piles
+        # draw the decks
+        # draw the buttons
+        pass
+
+
+class Player():
+    """My class."""
+
+    def __init__(self, user_deck_selection):
+        self.user_deck_selection = user_deck_selection
+        self.deck = None
+        pass
+
+    def load_deck(self):
+        """Get the deck of the player."""
+        # load some player settings
+        self.deck = Deck(self.user_deck_selection)
+        pass
+
+
+class Deck():
+    """My class."""
+
+    def __init__(self):
+        pass
+
+    def load_cards(self):
+        pass
+
+
+class Card():
+    """My class."""
+
+    def __init__(self):
+        pass

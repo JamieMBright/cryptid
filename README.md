@@ -21,6 +21,6 @@ Testing some ideas for a game.
 
 `conda create -n cryptids python=3.10 pip spyder`
 
-`conda activate cryptids
+`conda activate cryptids`
 
 `pip install -e .`

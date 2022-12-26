@@ -16,6 +16,13 @@ from cryptids.keyboard import key_interpreter
 
 # build the game logger
 logger = build_logger(logging_level=logging.DEBUG)
+if settings.VERBOSE:
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setLevel(logging.DEBUG)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
 
 # Initialize Pygame
 pygame.init()

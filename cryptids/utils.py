@@ -1,17 +1,85 @@
 """Utilities for the Cryptids game."""
 import logging
 import pygame
+import re
 import sys
 
-from cryptids import settings
+from cryptids import settings as get
 
 # get the logger
 logger = logging.getLogger(__name__)
-handler = logging.StreamHandler(sys.stdout)
-handler.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-handler.setFormatter(formatter)
-logger.addHandler(handler)
+
+if get.VERBOSE:
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setLevel(logging.DEBUG)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
+
+def clean_string(string: str) -> str:
+    r"""
+    Remove punctuation from a string.
+
+    [   #Character block start.
+    ^   #Not these characters (letters, numbers).
+    \w  #Word characters.
+    \s  #Space characters.
+    ]   #Character block end.
+
+    Parameters
+    ----------
+    string : str
+        The string for cleaning.
+
+    Returns
+    -------
+    cleaned_string : str
+        The cleaned string.
+
+    """
+    check_type(string, "string", str)
+    return re.sub(r'[^\w\s]', '', string)
+
+
+def check_type(var, varname: str, vartype) -> None:
+    """
+    Check the type of a variable against it's intended type.
+
+    This variable takes var and checks it against var type using the isinstance
+    technique, it then produces a standardised error message in the outcome
+    that the variable is not the correct variable.
+
+    Parameters
+    ----------
+    var : any type
+        An instance of the variable you wish to check
+    varname : str
+        A string that is the __name__ of the variable.
+    vartype : any type
+        An instance of the type of variable you expect var to be.
+
+    Returns
+    -------
+    None
+
+    Example
+    -------
+    import numpy as np
+    a = "not a numpy array"
+    check_type(a, "a", str) --> nothing happens
+    check_type(a, "a", np.ndarray) --> raises Type Error
+    """
+    # check inputs
+    if not isinstance(varname, str):
+        raise TypeError(
+            f"Input variable '{varname}' should be of type str is in fact of type: {type(varname)}")
+
+    # perform the check on the requested variable and vartype
+    if not isinstance(var, vartype):
+        raise TypeError(
+            f"Input variable '{varname}' should be of type {vartype} is in fact of type: {type(var)}")
+    return None
 
 
 def reshape_keep_aspect(img, new_height=None, new_width=None):
