@@ -10,7 +10,7 @@ import traceback
 import pygame
 
 from cryptids import settings
-from cryptids.game import GameWrapper
+from cryptids.gamewrapper import GameWrapper
 from cryptids.loggingdecorator import build_logger
 from cryptids.keyboard import key_interpreter
 
