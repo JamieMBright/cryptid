@@ -202,7 +202,7 @@ class User(object):
     successfully passed.
     """
 
-    def __init__(self, username: str):
+    def __init__(self, username: str, user: dict):
         logger.info(f"Making User class for {username}.")
         if not check_user_exists(username):
             logger.fatal(f"Should not be able to make a User object for a non existent user: {username}.")
@@ -214,6 +214,5 @@ class User(object):
         update_nfts(username)
 
         # get settings
-        user = load_user(username)
         self.loadouts = get_setting(user, "settings", "loadouts")
         self.nfts = get_setting(user, "settings", "nfts")

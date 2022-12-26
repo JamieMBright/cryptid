@@ -1,10 +1,21 @@
 """Gameplay event loop."""
+import logging
 from typing import List
+import sys
+
 import cryptids.settings as get
 from cryptids import usermanagement
 
+logger = logging.getLogger(__name__)
+if get.VERBOSE:
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setLevel(logging.DEBUG)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
 
-class GameBoard():
+
+class GameBoard(object):
     """
     The GameBoard class.
 
@@ -14,6 +25,7 @@ class GameBoard():
     """
 
     def __init__(self):
+        logger.info("Building the GameBoard")
         pass
 
     def render(self):
@@ -50,11 +62,13 @@ class Player(usermanagement.User):
 
     def __init__(self,
                  username,
+                 user,
                  user_deck_selection: List[int]):
         # initialize the User variable
-        super().__init__(username)
+        super().__init__(username, user)
         # objects loaded: self.loadouts, self.nfts
 
+        logger.info(f"Building the Player for {username}.")
         # initialize specifics
         self.user_deck_selection = user_deck_selection
         self.deck = self._load_deck()
@@ -71,7 +85,8 @@ class Player(usermanagement.User):
 class PlayerAI(object):
     """My AI Player."""
 
-    def __init__(self, user_deck_selection):
+    def __init__(self):
+        logger.info(f"Building the AI player.")
         self.user_deck_selection = self._random_deck_selection()
         self.deck = self._load_deck()
         self.hp = get.STARTING_HP
@@ -85,6 +100,8 @@ class PlayerAI(object):
 
     def _random_deck_selection(self):
         # !!! This should load some preset decks.
+        deck = [0]
+        logger.debug(f"AI deck selected: {deck}.")
         return [0]
 
 

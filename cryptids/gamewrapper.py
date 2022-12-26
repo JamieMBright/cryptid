@@ -584,7 +584,7 @@ class GameWrapper(object):
         if not self.game_started:
             # initialise the players
             # !!! render a loading screen.
-            self.player1 = gameplay.Player(self.username, self.user_deck_selection)
+            self.player1 = gameplay.Player(self.username, self.user, self.user_deck_selection)
             self.opponent = gameplay.PlayerAI()
 
             # build the game board
