@@ -1,11 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sat Dec 17 09:25:35 2022
-
-@author: jamie
-"""
-
-"""Button."""
+"""Button class."""
 import logging
 from os import PathLike
 from typing import Tuple
@@ -15,8 +8,6 @@ import pygame
 
 from cryptids import settings as get
 from cryptids import utils
-from cryptids.loggingdecorator import log
-from cryptids.keyboard import key_interpreter as ki
 
 # get the logger
 logger = logging.getLogger(__name__)

@@ -1,4 +1,5 @@
 """Utilities for the Cryptids game."""
+import ast
 import logging
 import pygame
 import re
@@ -15,6 +16,11 @@ if get.VERBOSE:
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
+
+
+def str_to_list(string: str):
+    """Convert a string representation of a list to a list."""
+    return ast.literal_eval(string)
 
 
 def clean_string(string: str) -> str:

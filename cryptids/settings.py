@@ -1,6 +1,9 @@
 """Constants/settings for the game."""
 import os
 
+# import specific gameplay settings
+from cryptids.gameplaysettings import *
+
 DEVELOPER = "Waimanu"
 VERBOSE = True
 DEFAULT_USERNAME = "default"

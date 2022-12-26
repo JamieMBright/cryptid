@@ -12,7 +12,6 @@ import pygame
 from cryptids import settings
 from cryptids.gamewrapper import GameWrapper
 from cryptids.loggingdecorator import build_logger
-from cryptids.keyboard import key_interpreter
 
 # build the game logger
 logger = build_logger(logging_level=logging.DEBUG)
@@ -96,7 +95,7 @@ def main():
 
                 # check if any buttons were pressed
                 if event.type == pygame.KEYDOWN:
-                    key_press = key_interpreter(event.key)
+                    key_press = event.unicode
                     logger.debug(f"KEYSTROKE with {key_press}")
                 else:
                     key_press = None

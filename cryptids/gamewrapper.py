@@ -14,6 +14,7 @@ import cryptids.settings as get
 from cryptids import utils
 from cryptids.button import Button
 from cryptids import usermanagement
+from cryptids import gameplay
 
 # get the logger
 logger = logging.getLogger(__name__)
@@ -38,6 +39,7 @@ class GameWrapper(object):
         self.login_success = False
         self.game_started = False
         self.username = None
+        self.user = None
         self.username_text = get.DEFAULT_USERNAME
         self.password_text = get.DEFAULT_PASSWORD
 
@@ -312,6 +314,7 @@ class GameWrapper(object):
                 case 0:
                     self.login_success = True
                     self.username = self.username_text
+                    self.user = user
                 case 1:
                     logger.info("PRE-PLAY SCREEN: Login attempted but unrecognised username")
                     self._render_popup(screen, click_pos, key_press, click_event, "Warning", "Unrecognised username")
@@ -361,8 +364,8 @@ class GameWrapper(object):
             logged_in_user_status = Button(text=f"Logged in as {self.username}.", x=x, y=y, click_pos=click_pos, click_event=click_event, access=False, width=get.WINWIDTH // 5, height=get.WINHEIGHT // 20, font_colour=get.RED)
             screen.blit(logged_in_user_status.surface, (x, y))
 
-            # pick deck
-            self.user_deck_selection = []
+            # !!! pick deck
+            self.user_deck_selection = utils.str_to_list(usermanagement.get_setting(self.user, "settings", "loadouts", "default"))
             # user settings
         else:
             # logout button -> move to main game loop
@@ -577,86 +580,25 @@ class GameWrapper(object):
             logger.info("GAMEPLAY SCREEN: Menu button pressed.")
             self.game_status = get.STATUS_PAUSE
 
+        # costly initialisations, only desire to do this ONCE at start of game.
         if not self.game_started:
-            # build the players
-            player1 = Player()
-            player1.load_deck()
-
-            player2 = Player()
-            # update the players
+            # initialise the players
+            # !!! render a loading screen.
+            self.player1 = gameplay.Player(self.username, self.user_deck_selection)
+            self.opponent = gameplay.PlayerAI()
 
             # build the game board
+            self.gameboard = gameplay.GameBoard()
 
-            # process new changes
+            # update game started status.
+            self.game_started = True
+
+        # process new changes
         x, y = pygame.mouse.get_pos()
         if key_press is not None:
             pass
-
-        # draw the frame
 
         # keyboard actions
         # get pause menu
         if key_press in get.K_ESC:
             _menu_button_action()
-
-
-class BoardGame():
-    """
-    The BoardGame class.
-
-    The Boardgame class knows where all the cards are, and deals with rendering
-    the game assets and visuals. It also has awareness of the focus of the
-    player.
-    """
-
-    def __init__(self, screen):
-        pass
-
-    def _render_background(self, screen):
-        """Draw the background."""
-        screen.fill("Black")
-
-    def _render_cards_in_play(self):
-        """Draw all cards that are in play."""
-        pass
-
-    def _render_gui(self):
-        """Draw all the components of the game."""
-        # draw the health bars
-        # draw num of cards left
-        # draw the discard piles
-        # draw the decks
-        # draw the buttons
-        pass
-
-
-class Player():
-    """My class."""
-
-    def __init__(self, user_deck_selection):
-        self.user_deck_selection = user_deck_selection
-        self.deck = None
-        pass
-
-    def load_deck(self):
-        """Get the deck of the player."""
-        # load some player settings
-        self.deck = Deck(self.user_deck_selection)
-        pass
-
-
-class Deck():
-    """My class."""
-
-    def __init__(self):
-        pass
-
-    def load_cards(self):
-        pass
-
-
-class Card():
-    """My class."""
-
-    def __init__(self):
-        pass

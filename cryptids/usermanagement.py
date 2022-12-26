@@ -76,38 +76,144 @@ def load_user(username: str = "default", password: str = "Password123!"):
     return (0, user)
 
 
-def get_setting(user: dict, setting: str):
+def get_setting(user: dict,
+                setting_depth1: str,
+                setting_depth2: str = None,
+                setting_depth3: str = None):
     """Getter for user settings."""
     # checks
     check_type(user, "user", dict)
-    check_type(setting, "setting", str)
-    if setting not in user.keys():
-        return None
-    elif setting == "password":
-        return None
+    check_type(setting_depth1, "setting", str)
+    if setting_depth2 is not None:
+        check_type(setting_depth2, "setting_depth2", str)
+    if setting_depth3 is not None:
+        check_type(setting_depth3, "setting_depth3", str)
+
+    # prevent protected settings
+    if setting_depth1 not in user.keys():
+        out = None
+    # get the unprotected setting
     else:
-        return user[setting]
+        # get the root setting
+        depth1 = user[setting_depth1]
+        # if we are not asking for deeper...
+        if setting_depth2 is None:
+            # then return this depth
+            out = depth1
+        else:
+            # else we are looking for deeper. Check that the new depth exists
+            if setting_depth2 not in depth1.keys():
+                # if not, return None as a sign of missing variable.
+                out = None
+            else:
+                # else the variable exists, extract this second tier
+                depth2 = depth1[setting_depth2]
+                # if we are looking for a third depth
+                if setting_depth3 is None:
+                    # otherwise return the depth 2
+                    out = depth2
+                else:
+                    # else check that the setting exists,
+                    if setting_depth3 not in depth2.keys():
+                        # if it doesn't, return None to indicate failure.
+                        out = None
+                    else:
+                        # else, return the third depth.
+                        out = depth2[setting_depth3]
+
+    return out
 
 
-def set_setting(username: str, user: dict, setting: str, new_value):
+def set_setting(username: str,
+                new_value,
+                setting_depth1: str,
+                setting_depth2: str = None,
+                setting_depth3: str = None,
+                force_new_user: bool = False):
     """Setter for user setting."""
     # checks
-    check_type(username, "usenamer", str)
-    check_type(user, "user", dict)
-    check_type(setting, "setting", str)
+    check_type(username, "usename", str)
+    check_type(setting_depth1, "setting_depth1", str)
+    if setting_depth2 is not None:
+        check_type(setting_depth2, "setting_depth2", str)
 
     # get all the information
     data = load_all_users()
 
     # check if the user exists
     stripped_username = clean_string(username)
-    if stripped_username not in data.keys():
-        logger.error(f"user '{stripped_username}' not in list.")
-        raise ValueError(f"Unrecognised username: {stripped_username}")
+    if not force_new_user:
+        if stripped_username not in data.keys():
+            logger.error(f"user '{stripped_username}' not in list.")
+            raise ValueError(f"Unrecognised username: {stripped_username}")
 
     # replace the settings
-    data[stripped_username][setting] = new_value
+    if setting_depth2 is None:
+        data[stripped_username][setting_depth1] = new_value
+    elif setting_depth3 is None:
+        data[stripped_username][setting_depth1][setting_depth2] = new_value
+    else:
+        data[stripped_username][setting_depth1][setting_depth2][setting_depth3] = new_value
 
     # Save the modified data back to the JSON file
     with open(FILEPATH, "w") as f:
         json.dump(data, f)
+
+
+def check_user_exists(username):
+    """Check whether a user already exists."""
+    users = load_all_users()
+    return username in users.keys()
+
+
+def make_new_user(username, password, email):
+    """Make a new user."""
+    if not check_user_exists(username):
+        # make user
+        set_setting(username, email, "email", force_new_user=True)
+        set_setting(username, password, "password")
+        set_setting(username, "[-1]", "settings", "nfts")
+        set_setting(username, "[0]", "settings", "loadouts", "default")
+        set_setting(username, 0, "records", "wins")
+        set_setting(username, 0, "records", "losses")
+        return (0, "user created")
+    else:
+        return (1, "user already exists")
+
+
+def update_nfts(username):
+    """
+    Get the nfts for an associated web3 wallet.
+
+    This should connect to a web3 and return the ids of all crytids nfts.
+    """
+    # !!! connect to web3
+    # Get NFTS
+    nfts_from_web3 = [0]
+    # update the user
+    set_setting(username, nfts_from_web3, "settings", "nfts")
+
+
+class User(object):
+    """
+    Define a user account.
+
+    The user MUST already exist. This is only used once the credentials have
+    successfully passed.
+    """
+
+    def __init__(self, username: str):
+        logger.info(f"Making User class for {username}.")
+        if not check_user_exists(username):
+            logger.fatal(f"Should not be able to make a User object for a non existent user: {username}.")
+            raise ValueError("This function should not be hit for an unknocn user.")
+        self.username = username
+
+        # force web3 update before gameplay
+        logger.info("Updating the NFTs for this user.")
+        update_nfts(username)
+
+        # get settings
+        user = load_user(username)
+        self.loadouts = get_setting(user, "settings", "loadouts")
+        self.nfts = get_setting(user, "settings", "nfts")
