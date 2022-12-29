@@ -72,6 +72,7 @@ def main():
         events = pygame.event.get()
         # flags
         click_event = False
+        key_event = False
         # if we have any, process them.
         if events:
             for event in events:
@@ -86,7 +87,7 @@ def main():
                     sys.exit()
 
                 # check if a click event occured
-                if event.type == pygame.MOUSEBUTTONDOWN:
+                if event.type == pygame.MOUSEBUTTONUP:
                     click_pos = event.pos
                     click_event = True
                     logger.debug(f"CLICK at {click_pos}")
@@ -96,6 +97,7 @@ def main():
                 # check if any buttons were pressed
                 if event.type == pygame.KEYDOWN:
                     key_press = event.unicode
+                    key_event = True
                     logger.debug(f"KEYSTROKE with {key_press}")
                 else:
                     key_press = None

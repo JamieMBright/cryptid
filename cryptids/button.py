@@ -85,6 +85,7 @@ class Button():
                  font_size_textbox: int = get.BUTTON_INTPUTTEXT_FONTSIZE,
                  font_colour: (str, Tuple[int, int, int]) = get.BUTTON_DEFAULT_FONTCOLOUR,
                  font_colour_textbox: (str, Tuple[int, int, int]) = get.BUTTON_INPUTTEXT_FONTCOLOUR,
+                 font_colour_active: (str, Tuple[int, int, int]) = get.BUTTON_ACTIVE_TEXT_COLOUR,
                  bg_colour: (str, Tuple[int, int, int]) = get.BUTTON_DEFAULT_BGCOLOUR,
                  bg_colour_highlighted: (str, Tuple[int, int, int]) = get.BUTTON_DEFAULT_BACKGROUND_HIGHLIGHTED,
                  bg_colour_clicked: (str, Tuple[int, int, int]) = get.BUTTON_DEFAULT_BACKGROUND_CLICKED,
@@ -92,11 +93,11 @@ class Button():
                  bg_colour_toggle_hover: (str, Tuple[int, int, int]) = get.BUTTON_DEFAULT_TOGGLE_HOVER_BG_COLOUR,
                  bg_colour_toggled: (str, Tuple[int, int, int]) = get.BUTTON_DEFAULT_TOGGLED_BG_COLOUR,
                  bg_colour_textbox: (str, Tuple[int, int, int]) = get.BUTTON_INTPUTTEXT_BACKGROUND_COLOUR,
+                 bg_colour_disabled: (str, Tuple[int, int, int]) = get.BUTTON_DEFAULT_BACKGROUND_DISABLED,
                  bg_image: PathLike = None,
                  border_thickness: int = get.BUTTON_DEFAULT_BORDER_THICKNESS,
                  border_colour: (str, Tuple[int, int, int]) = get.BUTTON_DEFAULT_BORDER_COLOUR,
                  border_colour_highlighted: (str, Tuple[int, int, int]) = get.BUTTON_DEFAULT_BORDER_HIGHLIGHTED,
-                 bg_colour_disabled: (str, Tuple[int, int, int]) = get.BUTTON_DEFAULT_BACKGROUND_DISABLED,
                  click_pos: Tuple[int, int] = None,
                  toggleable: bool = False,
                  click_event: bool = False,
@@ -115,6 +116,7 @@ class Button():
             self.font_name = font_name_textbox
             self.font_size = font_size_textbox
             self.font_colour = font_colour_textbox
+            self.font_colour_active = font_colour_active
         else:
             self.bg_colour = bg_colour
             self.font_name = font_name
@@ -149,9 +151,14 @@ class Button():
 
     def _render(self):
 
+        if self.active:
+            font_colour = self.font_colour_active
+        else:
+            font_colour = self.font_colour
+
         # make the text surface
         font = pygame.font.Font(self.font_name, self.font_size)
-        text_surface = font.render(self.text, True, self.font_colour)
+        text_surface = font.render(self.text, True, font_colour)
 
         # Resize the box if the text is too long.
         if self.allow_reshape:
@@ -160,7 +167,7 @@ class Button():
             while text_surface.get_width() >= self.width:
                 self.font_size -= 2
                 font = pygame.font.Font(self.font_name, self.font_size)
-                text_surface = font.render(self.text, True, self.font_colour)
+                text_surface = font.render(self.text, True, font_colour)
 
             # get the box surface
         box_surface = pygame.Surface((self.width + get.BUTTON_DEFAULT_TEXT_X_BUFFER, self.height + get.BUTTON_DEFAULT_TEXT_Y_BUFFER))

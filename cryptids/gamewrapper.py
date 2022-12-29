@@ -166,6 +166,13 @@ class GameWrapper(object):
         quit_button = Button(text="QUIT", x=x, y=y, click_pos=click_pos, click_event=click_event)
         screen.blit(quit_button.surface, (x, y))
 
+        # if logged in, say so
+        if self.login_success:
+            x = 0
+            y = 0
+            logged_in_user_status = Button(text=f"Logged in as {self.username}.", x=x, y=y, click_pos=click_pos, click_event=click_event, access=False, width=get.WINWIDTH // 5, height=get.WINHEIGHT // 22, font_colour=get.RED, bg_colour_disabled=get.SLATE_GRAY)
+            screen.blit(logged_in_user_status.surface, (x, y))
+
         # click actions
         if quit_button.was_clicked(click_pos) and click_event:
             utils.delay_n_frames(num_frames=get.DEFAULT_BUTTON_DELAY_ON_CLICK * get.CLOCKSPEED, clockspeed=get.CLOCKSPEED)
@@ -216,6 +223,13 @@ class GameWrapper(object):
         x, y = get.X50, get.Y50
         easy_button = Button(text="EASY", x=x, y=y, click_pos=click_pos, toggleable=True, click_event=click_event)
         screen.blit(easy_button.surface, (x, y))
+
+        # if logged in, say so
+        if self.login_success:
+            x = 0
+            y = 0
+            logged_in_user_status = Button(text=f"Logged in as {self.username}.", x=x, y=y, click_pos=click_pos, click_event=click_event, access=False, width=get.WINWIDTH // 5, height=get.WINHEIGHT // 22, font_colour=get.RED, bg_colour_disabled=get.SLATE_GRAY)
+            screen.blit(logged_in_user_status.surface, (x, y))
 
         # click actions
         if back_button.was_clicked(click_pos) and click_event:
@@ -361,13 +375,16 @@ class GameWrapper(object):
 
             x = 0
             y = 0
-            logged_in_user_status = Button(text=f"Logged in as {self.username}.", x=x, y=y, click_pos=click_pos, click_event=click_event, access=False, width=get.WINWIDTH // 5, height=get.WINHEIGHT // 20, font_colour=get.RED)
+            logged_in_user_status = Button(text=f"Logged in as {self.username}.", x=x, y=y, click_pos=click_pos, click_event=click_event, access=False, width=get.WINWIDTH // 5, height=get.WINHEIGHT // 22, font_colour=get.RED, bg_colour_disabled=get.SLATE_GRAY)
             screen.blit(logged_in_user_status.surface, (x, y))
 
             # !!! pick deck
             self.user_deck_selection = utils.str_to_list(usermanagement.get_setting(self.user, "settings", "loadouts", "default"))
             # user settings
+
         else:
+            # LOGGED OUT SCREEN
+
             # logout button -> move to main game loop
             x = get.X50 - get.BUTTON_DEFAULT_WIDTH // 2
             y = get.Y25
@@ -376,22 +393,22 @@ class GameWrapper(object):
 
             # login text boxes
             font = pygame.font.Font(get.PREPLAY_LOGIN_TEXT_FONT, get.PREPLAY_LOGIN_TEXT_FONTSIZE)
-            text = font.render("USERNAME:", True, get.PREPLAY_LOGIN_TEXT_COLOUR)
+            text = font.render("USERNAME:", True, get.PREPLAY_USERNAME_PASSWORD_TEXT_COLOUR)
             textRect = text.get_rect()
             textRect.left = get.X25
             textRect.top = get.Y50 - 25
             screen.blit(text, textRect)
             x, y = get.X50, get.Y50 - 25
-            username_textbox = Button(x=x, y=y, click_pos=click_pos, click_event=click_event, input_text=True, text=self.username_text)
+            username_textbox = Button(x=x, y=y, click_pos=click_pos, click_event=click_event, input_text=True, text=self.username_text, font_colour=get.PREPLAY_LOGIN_TEXT_COLOUR)
             screen.blit(username_textbox.surface, (x, y))
 
             font = pygame.font.Font(get.PREPLAY_LOGIN_TEXT_FONT, get.PREPLAY_LOGIN_TEXT_FONTSIZE)
-            text = font.render("PASSWORD:", True, get.PREPLAY_LOGIN_TEXT_COLOUR)
+            text = font.render("PASSWORD:", True, get.PREPLAY_USERNAME_PASSWORD_TEXT_COLOUR)
             textRect = text.get_rect()
             textRect.left = get.X25
             textRect.top = get.Y50 + 25
             x, y = get.X50, get.Y50 + 25
-            password_textbox = Button(x=x, y=y, click_pos=click_pos, click_event=click_event, input_text=True, text=self.password_text, private=True)
+            password_textbox = Button(x=x, y=y, click_pos=click_pos, click_event=click_event, input_text=True, text=self.password_text, private=True, font_colour=get.PREPLAY_LOGIN_TEXT_COLOUR)
             screen.blit(password_textbox.surface, (x, y))
             screen.blit(text, textRect)
 
@@ -503,7 +520,7 @@ class GameWrapper(object):
                         sys.exit()
 
                     # check if a click event occured
-                    if event.type == pygame.MOUSEBUTTONDOWN:
+                    if event.type == pygame.MOUSEBUTTONUP:
                         click_pos = event.pos
                         click_event = True
                         logger.debug(f"CLICK at {click_pos}")

@@ -1,10 +1,16 @@
 """Gameplay event loop."""
 import logging
-from typing import List
+import os
+import random
 import sys
+from typing import List, Tuple
+
+import pandas as pd
+import pygame
 
 import cryptids.settings as get
 from cryptids import usermanagement
+from cryptids.utils import check_type
 
 logger = logging.getLogger(__name__)
 if get.VERBOSE:
@@ -28,33 +34,98 @@ class GameBoard(object):
         logger.info("Building the GameBoard")
         pass
 
-    def render(self):
+    def render(self, screen, player1, player2):
         """Render the whole screen."""
-        self._render_background()
-        self._render_gui()
-        self._render_cards_in_play()
-        self._render_highlighted_card()
+        self._render_background(screen)
+        self._render_gui(screen, player1, player2)
+        self._render_cards_in_play(screen, player1.field, player2.field)
+        self._render_highlighted_card(screen, player1)
 
     def _render_background(self, screen):
         """Draw the background."""
-        screen.fill("Black")
+        screen.fill(get.GAME_BOARD_BACKGROUND_COLOUR)
 
-    def _render_gui(self, player):
+    def _render_gui(self, screen, player1, player2):
         """Draw all the components of the game."""
+        # draw the grid
+        x, y, w, h = 10, 10, 50, 30
+        self.draw_rect(screen, x, y, w, h)
+
         # draw the health bars
+        p1_hp = player1.get_hp()
+        p2_hp = player2.get_hp()
         # draw num of cards left
-        # draw the discard piles
+        p1_n_cards_in_deck = player1.get_cards_in_deck()
+        p2_n_cards_in_deck = player1.get_cards_in_deck()
         # draw the decks
+        if p1_n_cards_in_deck > 0:
+            pass  # !!! need to draw this
+
+        # draw the discard piles
+        p1_n_cards_in_discard = player1.get_cards_in_discard()
+        p2_n_cards_in_discard = player2.get_cards_in_discard()
+
         # draw the buttons
         pass
 
-    def _render_cards_in_play(self, player):
+    def _render_cards_in_play(self, screen, player):
         """Draw all cards that are in play."""
         pass
 
-    def _render_highlighted_card(self, player):
+    def _render_highlighted_card(self, screen, player):
         """Draw the highlighted card."""
         pass
+
+    @classmethod
+    def draw_rect(screen: pygame.Surface,
+                  x: int,
+                  y: int,
+                  width_abs: int = None,
+                  height_abs: int = None,
+                  width_rel: (int, float) = None,
+                  height_rel: (int, float) = None,
+                  border_thickness: int = get.GRID_BORDER_THICKNESS,
+                  border_colour: (str, Tuple[int, int, int]) = get.GRID_BORDER_DEFAULT_COLOUR):
+        """Draw a transparent rectangle."""
+        # checks
+        check_type(screen, "screen", pygame.Surface)
+        check_type(x, "x", int)
+        check_type(y, "y", int)
+        if width_abs is not None:
+            check_type(width_abs, "width_abs", int)
+        if width_rel is not None:
+            check_type(width_rel, "width_rel", int)
+        if height_abs is not None:
+            check_type(height_abs, "height_abs", int)
+        if height_rel is not None:
+            check_type(height_rel, "height_rel", int)
+        check_type(border_thickness, "border_thickness", int)
+        check_type(border_colour, "border_colour", (str, Tuple[int, int, int]))
+        if width_abs is not None and width_rel is not None:
+            raise ValueError("Both absolute and relative widths were provided. Can only provide one.")
+        elif width_abs is None and width_rel is None:
+            raise TypeError("Need at least one width, abs or rel")
+        if height_abs is not None and height_rel is not None:
+            raise ValueError("Both absolute and relative heights were provided. Can only provide one.")
+        elif height_abs is None and height_rel is None:
+            raise TypeError("Need at least one height, abs or rel")
+
+        # get the widths and heights
+        W = get.WINWIDTH
+        H = get.WINHEIGHT
+
+        if width_abs is not None:
+            width = width_abs
+        elif width_rel is not None:
+            width = int(W * width_rel)
+
+        if height_abs is not None:
+            height = height_abs
+        elif height_rel is not None:
+            height = int(H * height_rel)
+
+        # Draw the rectangle)
+        return pygame.draw.rect(screen, border_colour, (x, y, width, height), border_thickness)
 
 
 class Player(usermanagement.User):
@@ -71,22 +142,110 @@ class Player(usermanagement.User):
         logger.info(f"Building the Player for {username}.")
         # initialize specifics
         self.user_deck_selection = user_deck_selection
+        # card locations
         self.deck = self._load_deck()
-        self.hp = get.STARTING_HP
+        self.discard = []
+        self.hand = []
+        self.field = {}  # !!! OrderedDict?
+        for i in range(get.FIELD_SIZE):
+            self.field[i] = None
+
+        self.hp_starting = get.STARTING_HP
+        self.hp_current = get.STARTING_HP
         self.deck_size = get.DECK_SIZE
         self.hand_size = get.HAND_SIZE
+        self.dead_value = 0  # !!! fun mechanic/spell to have negative life?
+        self.dead = False
 
-    def _load_deck(self,):
+    def _load_deck(self) -> None:
         """Get the deck of the player."""
         # load some player settings
         self.deck = [Card(card_id) for card_id in self.user_deck_selection]
+        logger.info(f"{self.username}'s deck loaded.")
+
+    def get_cards_in_deck(self) -> int:
+        """Return the number of cards left in the player's deck."""
+        return len(self.deck)
+
+    def get_cards_in_discard(self) -> int:
+        """Return the number of cards left in the player's deck."""
+        return len(self.discard)
+
+    def get_n_cryptids_on_field(self) -> int:
+        """Return the number of cryptids in play."""
+        count = 0
+        for key in get.FIELD_SIZE:
+            if self.field[key] is not None:
+                count += 1
+        return count
+
+    def draw_card(self, destination: List[Card]) -> List[Card]:
+        """Draw a card from deck to destination."""
+        if self.get_cards_in_deck > 0:
+            logger.info(f"{self.username}'s drawing card.")
+            return destination.insert(self.deck.pop())
+        else:
+            logger.fatal(f"No cards left in deck.")
+            raise ValueError(f"No cards left in deck.")
+
+    def play_card(self, origin, card_pos, field_pos) -> List[Card]:
+        """Play card from origin list to field."""
+        if self.field[field_pos] is None:
+            logger.info(f"Card {origin[card_pos]} played to field position {field_pos}")
+            self.field[field_pos] = origin.pop(card_pos)
+            return origin
+        else:
+            logger.fatal(f"Field pos: {field_pos} already contains a card.")
+            raise ValueError(f"Field pos: {field_pos} already contains a card.")
+
+    def discard_card(self, origin: List[Card], pos: int) -> List[Card]:
+        """Discard the pos-th position Card from origin."""
+        logger.info("Discarding {origin[pos]}")
+        self.discard.insert(origin.pop(pos))
+        return origin
+
+    def attack_received(self, dmg: int, field_pos: int = None) -> None:
+        """Deal damage to a particular cryptid and distribute excess damage."""
+        if field_pos is None:
+            # attack straight to health
+            return self.reduce_hp(dmg)
+        # else a specific cryptid is attacked
+        # check that a cryptid was selected.
+        if self.field[field_pos] is None:
+            logger.fatal(f"Field position {field_pos} does not have a cryptid.")
+            raise ValueError(f"Field position {field_pos} does not have a cryptid.")
+        # deal damage to the card
+        excess_damage = self.field[field_pos].receive_damage(dmg)
+        # if any excess damage is dealt
+        if excess_damage > 0:
+            # deal the damage equally to all cryptids.
+            n = self.get_n_cryptids_on_field() - 1
+            if n == 0:
+                return self.reduce_hp(excess_damage)
+            else:
+                # always want to deal with all damage, but also total ints.
+                # to do this, calculate the overspill, and hit first cryptid
+                overspill = (excess_damage % n)
+                dmg_per_cryptid = (excess_damage - overspill) // n
+                for i in get.FIELD_SIZE:
+                    if self.field[i] is not None and i != field_pos:
+                        self.flield[i].receive_damage(dmg_per_cryptid + overspill)
+                        overspill = 0
+
+    def reduce_hp(self, amount: int) -> None:
+        """Reduce player's hp by a set amount."""
+        self.hp_current -= amount
+        # if the hp is depleted, set status to dead.
+        if self.hp_current <= self.dead_value:
+            self.dead = True
 
 
 class PlayerAI(object):
     """My AI Player."""
 
     def __init__(self):
-        logger.info(f"Building the AI player.")
+        """Initialize the AI."""
+        logger.info("Building the AI player.")
         self.user_deck_selection = self._random_deck_selection()
         self.deck = self._load_deck()
         self.hp = get.STARTING_HP
@@ -100,14 +259,90 @@ class PlayerAI(object):
 
     def _random_deck_selection(self):
         # !!! This should load some preset decks.
-        deck = [0]
+        n = 3
+        start = 0
+        end = 9
+        random_ints = random.sample(range(start, end + 1), n)
         logger.debug(f"AI deck selected: {deck}.")
         return [0]
 
 
-class Card(object):
-    """Card class."""
+def main():
+    """
+    Cryptids.
 
-    def __init__(self, card_id: int):
-        """Initialize the card."""
-        self.id = card_id
+    Run the Cryptids trading card game.
+    """
+    import sys
+    import traceback
+    import pygame
+    from cryptids import settings
+
+    pygame.init()
+    screen = pygame.display.set_mode((settings.WINWIDTH, settings.WINHEIGHT))
+    pygame.display.set_caption(settings.WINTITLE)
+    clock = pygame.time.Clock()
+
+    gameboard = GameBoard()
+
+    running = True
+    while running:
+        # Handle events
+        events = pygame.event.get()
+        # flags
+        click_event = False
+        key_event = False
+        # if we have any, process them.
+        if events:
+            for event in events:
+
+                # check if the window is closed
+                if event.type == pygame.QUIT:
+                    logger.info("Quit event detected. Closing the game.")
+                    # if so, end the script by breaking the while loop
+                    running = False
+                    # Quit Pygame
+                    pygame.quit()
+                    sys.exit()
+
+                # check if a click event occured
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    click_pos = event.pos
+                    click_event = True
+                    logger.debug(f"CLICK at {click_pos}")
+                else:
+                    click_pos = None
+
+                # check if any buttons were pressed
+                if event.type == pygame.KEYDOWN:
+                    key_press = event.unicode
+                    key_event = True
+                    logger.debug(f"KEYSTROKE with {key_press}")
+                else:
+                    key_press = None
+
+        # update display
+        try:
+            gameboard.render(screen)
+            # game.render(screen, click_pos, key_press, click_event)
+
+        except SystemExit:
+            logger.info("Force closing the game.")
+            sys.exit()
+
+        except BaseException:
+            logger.error(traceback.format_exc())
+            logger.info("Closing the game due to unexpected error.")
+            running = False
+            pygame.quit()
+            sys.exit()
+
+        # Update the display
+        pygame.display.update()
+
+        # Limit frame rate to set FPS
+        clock.tick(settings.CLOCKSPEED)
+
+
+# if __name__ == "__main__":
+#     main()
