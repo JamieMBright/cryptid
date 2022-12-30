@@ -1,16 +1,15 @@
 """Gameplay event loop."""
 import logging
-import os
 import random
 import sys
 from typing import List, Tuple
 
-import pandas as pd
 import pygame
 
 import cryptids.settings as get
 from cryptids import usermanagement
 from cryptids.utils import check_type
+from cryptids.card import Card
 
 logger = logging.getLogger(__name__)
 if get.VERBOSE:
@@ -146,6 +145,7 @@ class Player(usermanagement.User):
         self.deck = self._load_deck()
         self.discard = []
         self.hand = []
+        self.fill_hand()
         self.field = {}  # !!! OrderedDict?
         for i in range(get.FIELD_SIZE):
             self.field[i] = None
@@ -161,11 +161,27 @@ class Player(usermanagement.User):
         """Get the deck of the player."""
         # load some player settings
         self.deck = [Card(card_id) for card_id in self.user_deck_selection]
+        # shuffle the deck
+        random.shuffle(self.deck)
         logger.info(f"{self.username}'s deck loaded.")
+
+    def fill_hand(self) -> None:
+        """Fill the hand with minimum number of cards."""
+        while self.get_cards_in_hand() < get.HAND_SIZE:
+            if self.get_cards_in_deck() > 0:
+                self.hand = self.draw_card(self.hand)
+
+    def is_dead(self):
+        """Return if the player is dead."""
+        return self.dead
 
     def get_cards_in_deck(self) -> int:
         """Return the number of cards left in the player's deck."""
         return len(self.deck)
+
+    def get_cards_in_hand(self) -> int:
+        """Return the number of cards left in the player's hand."""
+        return len(self.hand)
 
     def get_cards_in_discard(self) -> int:
         """Return the number of cards left in the player's deck."""
@@ -185,14 +201,16 @@ class Player(usermanagement.User):
             logger.info(f"{self.username}'s drawing card.")
             return destination.insert(self.deck.pop())
         else:
-            logger.fatal(f"No cards left in deck.")
-            raise ValueError(f"No cards left in deck.")
+            logger.fatal("No cards left in deck.")
+            raise ValueError("No cards left in deck.")
 
     def play_card(self, origin, card_pos, field_pos) -> List[Card]:
         """Play card from origin list to field."""
         if self.field[field_pos] is None:
             logger.info(f"Card {origin[card_pos]} played to field position {field_pos}")
-            self.field[field_pos] = origin.pop(card_pos)
+            # pop returns the card object. play_card updates the card object
+            # and also returns self. put this card in the field dict.
+            self.field[field_pos] = origin.pop(card_pos).play_card()
             return origin
         else:
             logger.fatal(f"Field pos: {field_pos} already contains a card.")
@@ -239,6 +257,15 @@ class Player(usermanagement.User):
         if self.hp_current <= self.dead_value:
             self.dead = True
 
+    def end_turn(self):
+        """End the turn."""
+        # update cards
+        for cards in [self.deck, self.hand, self.discard]:
+            for card in cards:
+                card.update_on_turn_end()
+        for i in range(get.FIELD_SIZE):
+            self.field[i].update_on_turn_end()
+
 
 class PlayerAI(object):
     """My AI Player."""
@@ -259,90 +286,9 @@ class PlayerAI(object):
 
     def _random_deck_selection(self):
         # !!! This should load some preset decks.
-        n = 3
-        start = 0
-        end = 9
-        random_ints = random.sample(range(start, end + 1), n)
-        logger.debug(f"AI deck selected: {deck}.")
+        # n = 3
+        # start = 0
+        # end = 9
+        # random_ints = random.sample(range(start, end + 1), n)
+        # logger.debug("AI deck selected: {deck}.")
         return [0]
-
-
-def main():
-    """
-    Cryptids.
-
-    Run the Cryptids trading card game.
-    """
-    import sys
-    import traceback
-    import pygame
-    from cryptids import settings
-
-    pygame.init()
-    screen = pygame.display.set_mode((settings.WINWIDTH, settings.WINHEIGHT))
-    pygame.display.set_caption(settings.WINTITLE)
-    clock = pygame.time.Clock()
-
-    gameboard = GameBoard()
-
-    running = True
-    while running:
-        # Handle events
-        events = pygame.event.get()
-        # flags
-        click_event = False
-        key_event = False
-        # if we have any, process them.
-        if events:
-            for event in events:
-
-                # check if the window is closed
-                if event.type == pygame.QUIT:
-                    logger.info("Quit event detected. Closing the game.")
-                    # if so, end the script by breaking the while loop
-                    running = False
-                    # Quit Pygame
-                    pygame.quit()
-                    sys.exit()
-
-                # check if a click event occured
-                if event.type == pygame.MOUSEBUTTONDOWN:
-                    click_pos = event.pos
-                    click_event = True
-                    logger.debug(f"CLICK at {click_pos}")
-                else:
-                    click_pos = None
-
-                # check if any buttons were pressed
-                if event.type == pygame.KEYDOWN:
-                    key_press = event.unicode
-                    key_event = True
-                    logger.debug(f"KEYSTROKE with {key_press}")
-                else:
-                    key_press = None
-
-        # update display
-        try:
-            gameboard.render(screen)
-            # game.render(screen, click_pos, key_press, click_event)
-
-        except SystemExit:
-            logger.info("Force closing the game.")
-            sys.exit()
-
-        except BaseException:
-            logger.error(traceback.format_exc())
-            logger.info("Closing the game due to unexpected error.")
-            running = False
-            pygame.quit()
-            sys.exit()
-
-        # Update the display
-        pygame.display.update()
-
-        # Limit frame rate to set FPS
-        clock.tick(settings.CLOCKSPEED)
-
-
-# if __name__ == "__main__":
-#     main()

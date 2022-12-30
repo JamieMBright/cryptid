@@ -194,18 +194,13 @@ SUMMON_LEVEL_ATT_UPPER = [200, 400, 600, 800]
 SUMMON_LEVEL_ATT_LOWER = [100, 200, 400, 600]
 SUMMON_LEVEL_HP_UPPER = [250, 450, 650, 850]
 SUMMON_LEVEL_HP_LOWER = [150, 250, 450, 650]
-TYPE_CONTIRBUTION_UPPER = [20, 30, 40, 50]
-TYPE_CONTIRBUTION_LOWER = [10, 20, 30, 40]
-
 
 # strengths/weaknesses
 TYPE_CHART = {
     "blood": {"weaknesses": ["cosmic"], "strengths": ["sweat"]},
     "sweat": {"weaknesses": ["blood"], "strengths": ["tears"]},
     "tears": {"weaknesses": ["sweat"], "strengths": ["physical"]},
-    "physical": {"weaknesses": ["tears"], "strengths": ["technological"]},
-    "technological": {"weaknesses": ["physical"], "strengths": ["cosmic"]},
-    "cosmic": {"weaknesses": ["technological"], "strengths": ["blood"]}
+    "normal": {"weaknesses": [], "strengths": []}
 }
 
 
@@ -230,7 +225,6 @@ def mint_cryptid(CLASS, SUMMON_LEVEL):
     card_data["modifier"] = MODIFIERS[idx]
     card_data["hp"] = randint(SUMMON_LEVEL_HP_LOWER[SUMMON_LEVEL], SUMMON_LEVEL_HP_UPPER[SUMMON_LEVEL])
     card_data["attack"] = randint(SUMMON_LEVEL_ATT_LOWER[SUMMON_LEVEL], SUMMON_LEVEL_ATT_UPPER[SUMMON_LEVEL])
-    card_data["type_contribution"] = randint(TYPE_CONTIRBUTION_LOWER[SUMMON_LEVEL], TYPE_CONTIRBUTION_UPPER[SUMMON_LEVEL])
     return card_data
 
 
