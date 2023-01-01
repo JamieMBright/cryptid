@@ -38,10 +38,12 @@ class GameWrapper(object):
         self.focus_pos = [0, 0]
         self.login_success = False
         self.game_started = False
+        self.register_attempt = False
         self.username = None
         self.user = None
         self.username_text = get.DEFAULT_USERNAME
         self.password_text = get.DEFAULT_PASSWORD
+        self.email_text = get.DEFAULT_EMAIL
 
     def render(self, screen, click_pos, key_press, click_event: bool) -> object:
         """Select the game status to render."""
@@ -54,6 +56,8 @@ class GameWrapper(object):
                 self._render_settings_screen(screen, click_pos, key_press, click_event)
             case get.STATUS_PREPLAY:
                 self._render_pre_play_mode(screen, click_pos, key_press, click_event)
+            case get.STATUS_REGISTER:
+                self._render_register(screen, click_pos, key_press, click_event)
             case get.STATUS_OUTRO:
                 self._render_outro(screen, click_pos, key_press, click_event)
             case get.STATUS_GAMEPLAY:
@@ -340,7 +344,11 @@ class GameWrapper(object):
             logger.info("PRE-PLAY SCREEN: logout button pressed.")
             self.login_success = False
             self.username = None
-            self.password_text = get.DEFAULT_PASSWORD
+            self.password_text = self.password_text
+
+        def _register_button_action():
+            logger.info("PRE-PLAY SCREEN: register button pressed.")
+            self.game_status = get.STATUS_REGISTER
 
         #  background imagery
         screen.fill(get.LOGO_SCREEN_BACKGROUND_COLOR)
@@ -385,11 +393,17 @@ class GameWrapper(object):
         else:
             # LOGGED OUT SCREEN
 
-            # logout button -> move to main game loop
+            # log in button -> move to main game loop
             x = get.X50 - get.BUTTON_DEFAULT_WIDTH // 2
             y = get.Y25
             log_button = Button(text="LOG IN", x=x, y=y, click_pos=click_pos, click_event=click_event)
             screen.blit(log_button.surface, (x, y))
+
+            # register button -> move to registration page
+            x = get.X50 - get.BUTTON_DEFAULT_WIDTH
+            y = get.Y50 - 50 - get.BUTTON_DEFAULT_HEIGHT
+            register_button = Button(text="Don't have an account? Register now.", x=x, y=y, click_pos=click_pos, click_event=click_event, font_colour=get.BLACK, width=get.BUTTON_DEFAULT_WIDTH * 2, height=get.BUTTON_DEFAULT_HEIGHT // 2)
+            screen.blit(register_button.surface, (x, y))
 
             # login text boxes
             font = pygame.font.Font(get.PREPLAY_LOGIN_TEXT_FONT, get.PREPLAY_LOGIN_TEXT_FONTSIZE)
@@ -419,6 +433,10 @@ class GameWrapper(object):
             if password_textbox.was_clicked(click_pos) and click_event:
                 self.password_text = password_textbox.text_input_action(screen)
 
+            if register_button.was_clicked(click_pos) and click_event:
+                utils.delay_n_frames(num_frames=get.DEFAULT_BUTTON_DELAY_ON_CLICK * get.CLOCKSPEED, clockspeed=get.CLOCKSPEED)
+                _register_button_action()
+
         # click actions
         if back_button.was_clicked(click_pos) and click_event:
             utils.delay_n_frames(num_frames=get.DEFAULT_BUTTON_DELAY_ON_CLICK * get.CLOCKSPEED, clockspeed=get.CLOCKSPEED)
@@ -440,6 +458,134 @@ class GameWrapper(object):
         # keyboard actions
         if key_press in get.K_BACK:
             _back_button_action()
+
+    def _render_register(self, screen, click_pos, key_press, click_event):
+
+        def _back_button_action():
+            logger.info("REGISTRATION SCREEN: Back button pressed.")
+            self.game_status = get.STATUS_PREPLAY
+
+        def _register_button_action():
+            logger.info(f"REGISTRATION SCREEN: Register button pressed for {self.email_text} and {self.username_text} and {self.password_text}.")
+
+            # check email
+            email_check = False
+            if usermanagement.check_email_exists(self.email_text):
+                self._render_popup(screen, click_pos, key_press, click_event, "Warning", "Email address already registered")
+            else:
+                email_check = True
+
+            # check username
+            username_check = False
+            if usermanagement.check_user_exists(self.username_text):
+                self._render_popup(screen, click_pos, key_press, click_event, "Warning", "Username already registered")
+            else:
+                username_check = True
+
+            # check password
+            password_check = False
+            if len(self.password_text) < 8:
+                self._render_popup(screen, click_pos, key_press, click_event, "Warning", "Password must be at least 8 letters long.")
+                self.password_text = ""
+            else:
+                password_check = True
+
+            # if all the checks were passed...
+            if email_check and username_check and password_check:
+                # make the account
+                (status_code, status_msg) = usermanagement.make_new_user(self.username_text, self.password_text, self.email_text)
+
+                if status_code == 0:
+                    logger.info(f"REGISTRATION SCREEN: registration successful for {self.email_text} and {self.username_text} and {self.password_text}.")
+                    # and reset the registration attempt
+                    self.register_attempt = False
+                    self.game_status = get.STATUS_PREPLAY
+                    self._render_popup(screen, click_pos, key_press, click_event, "New registration", f"Successfully created the user {self.username_text}")
+                else:
+                    logger.fatal(f"REGISTRATION SCREEN: registration unsuccessful for {self.email_text} and {self.username_text} and {self.password_text}.")
+
+        # if the username
+        if not self.register_attempt:
+            self.username_text = ""
+            self.password_text = ""
+            self.email_text = ""
+            self.register_attempt = True
+
+        #  background imagery
+        screen.fill(get.LOGO_SCREEN_BACKGROUND_COLOR)
+        logo = pygame.image.load(get.LOGO_SCREEN_IMAGE_PATH).convert_alpha()
+        logo.fill((255, 255, 255, get.SETTINGS_LOGO_IMG_ALPHA), None, pygame.BLEND_RGBA_MULT)
+        logo = utils.reshape_keep_aspect(logo, new_height=get.WINHEIGHT * get.LOGO_HEIGHT_RELATIVE_TO_SCREEN_HEIGHT)
+        logoRect = logo.get_rect()
+        logoRect.center = get.CENTRE
+        screen.blit(logo, logoRect)
+
+        # buttons
+        # back button -> move to home screen
+        x = get.X25 - get.BUTTON_DEFAULT_WIDTH // 2
+        y = int(get.WINHEIGHT * get.HOME_BUTTON_Y_REL - get.BUTTON_DEFAULT_HEIGHT // 2)
+        back_button = Button(text="BACK", x=x, y=y, click_pos=click_pos, click_event=click_event)
+        screen.blit(back_button.surface, (x, y))
+
+        # register button -> move to main game loop
+        x = get.X50 - get.BUTTON_DEFAULT_WIDTH // 2
+        y = get.Y25
+        register_button = Button(text="REGISTER", x=x, y=y, click_pos=click_pos, click_event=click_event)
+        screen.blit(register_button.surface, (x, y))
+
+        # registration text boxes
+        root_y = get.Y75 + get.BUTTON_DEFAULT_HEIGHT
+        offset = get.BUTTON_DEFAULT_HEIGHT // 2
+        but_height = get.BUTTON_DEFAULT_HEIGHT
+
+        font = pygame.font.Font(get.PREPLAY_LOGIN_TEXT_FONT, get.PREPLAY_LOGIN_TEXT_FONTSIZE)
+        text = font.render("EMAIL:", True, get.PREPLAY_USERNAME_PASSWORD_TEXT_COLOUR)
+        textRect = text.get_rect()
+        textRect.left = get.X25
+        textRect.top = root_y
+        screen.blit(text, textRect)
+        x, y = get.X50, root_y
+        email_textbox = Button(x=x, y=y, click_pos=click_pos, click_event=click_event, input_text=True, text=self.email_text, font_colour=get.PREPLAY_LOGIN_TEXT_COLOUR, font_colour_textbox=get.PREPLAY_LOGIN_TEXT_COLOUR, font_colour_active=get.PREPLAY_LOGIN_TEXT_COLOUR)
+        screen.blit(email_textbox.surface, (x, y))
+
+        font = pygame.font.Font(get.PREPLAY_LOGIN_TEXT_FONT, get.PREPLAY_LOGIN_TEXT_FONTSIZE)
+        text = font.render("USERNAME:", True, get.PREPLAY_USERNAME_PASSWORD_TEXT_COLOUR)
+        textRect = text.get_rect()
+        textRect.left = get.X25
+        textRect.top = root_y + but_height + offset
+        screen.blit(text, textRect)
+        x, y = get.X50, root_y + but_height + offset
+        username_textbox = Button(x=x, y=y, click_pos=click_pos, click_event=click_event, input_text=True, text=self.username_text, font_colour=get.PREPLAY_LOGIN_TEXT_COLOUR, font_colour_textbox=get.PREPLAY_LOGIN_TEXT_COLOUR, font_colour_active=get.PREPLAY_LOGIN_TEXT_COLOUR, clean_str=True)
+        screen.blit(username_textbox.surface, (x, y))
+
+        font = pygame.font.Font(get.PREPLAY_LOGIN_TEXT_FONT, get.PREPLAY_LOGIN_TEXT_FONTSIZE)
+        text = font.render("PASSWORD:", True, get.PREPLAY_USERNAME_PASSWORD_TEXT_COLOUR)
+        textRect = text.get_rect()
+        textRect.left = get.X25
+        textRect.top = root_y + but_height * 2 + offset * 2
+        x, y = get.X50, root_y + but_height * 2 + offset * 2
+        password_textbox = Button(x=x, y=y, click_pos=click_pos, click_event=click_event, input_text=True, text=self.password_text, private=True, font_colour=get.PREPLAY_LOGIN_TEXT_COLOUR, font_colour_textbox=get.PREPLAY_LOGIN_TEXT_COLOUR, font_colour_active=get.PREPLAY_LOGIN_TEXT_COLOUR)
+        screen.blit(password_textbox.surface, (x, y))
+        screen.blit(text, textRect)
+
+        # login specific buttons
+        if email_textbox.was_clicked(click_pos) and click_event:
+            self.email_text = email_textbox.text_input_action(screen, text=self.email_text)
+
+        if username_textbox.was_clicked(click_pos) and click_event:
+            self.username_text = username_textbox.text_input_action(screen, text=self.username_text)
+
+        if password_textbox.was_clicked(click_pos) and click_event:
+            self.password_text = password_textbox.text_input_action(screen, text=self.password_text)
+
+        # click actions
+        if back_button.was_clicked(click_pos) and click_event:
+            utils.delay_n_frames(num_frames=get.DEFAULT_BUTTON_DELAY_ON_CLICK * get.CLOCKSPEED, clockspeed=get.CLOCKSPEED)
+            _back_button_action()
+
+        if register_button.was_clicked(click_pos) and click_event:
+            utils.delay_n_frames(num_frames=get.DEFAULT_BUTTON_DELAY_ON_CLICK * get.CLOCKSPEED, clockspeed=get.CLOCKSPEED)
+            _register_button_action()
 
     def _render_pause_menu(self, screen, click_pos, key_press, click_event):
         """Draw the pause menu."""
@@ -599,13 +745,29 @@ class GameWrapper(object):
 
         # costly initialisations, only desire to do this ONCE at start of game.
         if not self.game_started:
+            # blit a loading message to screen
+            screen.fill(get.LOADING_SCREEN_BG_COLOUR)
+            x, y = get.X50 - get.BUTTON_DEFAULT_WIDTH // 2, get.Y50 - get.BUTTON_DEFAULT_HEIGHT // 2
+            loading = Button(text="LOADING...", x=x, y=y, click_pos=click_pos, click_event=click_event, width=get.BUTTON_DEFAULT_WIDTH, access=False, font_colour=get.LOADING_SCREEN_FONT_COLOUR, font_size=get.LOADING_SCREEN_FONT_SIZE, font_name=get.LOADING_SCREEN_FONT, bg_colour_disabled=get.LOADING_SCREEN_BUTTON_BG_COLOUR)
+            screen.blit(loading.surface, (x, y))
+
+            logging.debug("First time the gameplay has been called. Loading assets and core classes.")
             # initialise the players
             # !!! render a loading screen.
-            self.player1 = gameplay.Player(self.username, self.user, self.user_deck_selection)
-            self.opponent = gameplay.PlayerAI()
+            logging.debug(f"Loading player class for {self.username}, and for the selected deck: {self.user_deck_selection}")
+            print(self.user)
+            print(self.username)
+            print(self.user_deck_selection)
+
+            # self.player1 = gameplay.Player(self.username, self.user, self.user_deck_selection)
+            # self.opponent = gameplay.PlayerAI()
 
             # build the game board
-            self.gameboard = gameplay.GameBoard()
+            # self.gameboard = gameplay.GameBoard()
+
+            # introduce a short delay just for aesthetics of load screen.
+
+            utils.delay_n_frames(num_frames=get.LOADING_SCREEN_ENFORCED_DELAY * get.CLOCKSPEED, clockspeed=get.CLOCKSPEED)
 
             # update game started status.
             self.game_started = True

@@ -147,6 +147,10 @@ def set_setting(username: str,
             logger.error(f"user '{stripped_username}' not in list.")
             raise ValueError(f"Unrecognised username: {stripped_username}")
 
+    # if this is a new user, need to initialize the dictionary
+    if force_new_user:
+        data[stripped_username] = {}
+
     # replace the settings
     if setting_depth2 is None:
         data[stripped_username][setting_depth1] = new_value
@@ -166,19 +170,52 @@ def check_user_exists(username):
     return username in users.keys()
 
 
+def check_email_exists(email):
+    """Check whether a user already exists."""
+    users = load_all_users()
+    for user in users.keys():
+        if email == users[user]["email"]:
+            return True
+    return False
+
+
 def make_new_user(username, password, email):
     """Make a new user."""
     if not check_user_exists(username):
         # make user
         set_setting(username, email, "email", force_new_user=True)
         set_setting(username, password, "password")
+        set_setting(username, {}, "settings")
         set_setting(username, "[-1]", "settings", "nfts")
-        set_setting(username, "[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50]", "settings", "loadouts", "default")
+        set_setting(username, {}, "settings", "loadouts")
+        set_setting(username, str([x + 1 for x in range(get.DECK_SIZE)]), "settings", "loadouts", "default")
+        set_setting(username, {}, "records")
         set_setting(username, 0, "records", "wins")
         set_setting(username, 0, "records", "losses")
         return (0, "user created")
     else:
         return (1, "user already exists")
+
+
+def delete_user(username):
+    """Delete a user from the data base."""
+    # checks
+    check_type(username, "usename", str)
+
+    # get all the information
+    data = load_all_users()
+
+    # check the user exists
+    if username not in data.keys():
+        logger.error(f"user '{username}' not in list.")
+        raise ValueError(f"Unrecognised username: {username}")
+
+    # remove the user
+    data.pop(username, None)
+
+    # Save the modified data back to the JSON file
+    with open(FILEPATH, "w") as f:
+        json.dump(data, f)
 
 
 def update_nfts(username):

@@ -8,6 +8,7 @@ import pygame
 
 from cryptids import settings as get
 from cryptids import utils
+from cryptids.usermanagement import clean_string
 
 # get the logger
 logger = logging.getLogger(__name__)
@@ -104,7 +105,8 @@ class Button():
                  access: bool = True,
                  input_text: bool = False,
                  allow_reshape: bool = False,
-                 private: bool = False
+                 private: bool = False,
+                 clean_str: bool = False
                  ):
 
         self.x = x
@@ -115,6 +117,7 @@ class Button():
             self.bg_colour = bg_colour_textbox
             self.font_name = font_name_textbox
             self.font_size = font_size_textbox
+            self.max_font_size = font_size_textbox
             self.font_colour = font_colour_textbox
             self.font_colour_active = font_colour_active
         else:
@@ -123,6 +126,7 @@ class Button():
             self.font_size = font_size
             self.font_colour = font_colour
 
+        self.max_font_size = self.font_size
         self.bg_colour_highlighted = bg_colour_highlighted
         self.bg_colour_clicked = bg_colour_clicked
         self.bg_colour_disabled = bg_colour_disabled
@@ -130,6 +134,7 @@ class Button():
         self.bg_colour_toggle_hover = bg_colour_toggle_hover
         self.bg_colour_toggled = bg_colour_toggled
         self.bg_image = bg_image
+        self.clean_str = clean_str
         if private:
             self.text = "*" * len(text)
         else:
@@ -156,6 +161,10 @@ class Button():
         else:
             font_colour = self.font_colour
 
+        # if clean_str is active, strip bad characters
+        if self.clean_str:
+            self.text = clean_string(self.text)
+
         # make the text surface
         font = pygame.font.Font(self.font_name, self.font_size)
         text_surface = font.render(self.text, True, font_colour)
@@ -164,8 +173,16 @@ class Button():
         if self.allow_reshape:
             self.width = text_surface.get_width()
         else:
+
             while text_surface.get_width() >= self.width:
                 self.font_size -= 2
+                font = pygame.font.Font(self.font_name, self.font_size)
+                text_surface = font.render(self.text, True, font_colour)
+
+            while text_surface.get_width() <= self.width:
+                if self.font_size >= self.max_font_size:
+                    break
+                self.font_size += 2
                 font = pygame.font.Font(self.font_name, self.font_size)
                 text_surface = font.render(self.text, True, font_colour)
 
@@ -245,14 +262,12 @@ class Button():
         """Get the access."""
         return self.access
 
-    def text_input_action(self, screen):
+    def text_input_action(self, screen, text=""):
         """Handle text input."""
         # set status to active
         self.active = True
         # set the loop break
         running = True
-        # initialize the text
-        text = ""
 
         # Set up game clock
         clock = pygame.time.Clock()

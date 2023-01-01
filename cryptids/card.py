@@ -36,6 +36,7 @@ class Card(object):
         # status about being played
         self.active = False
         self.turn_played = None
+        self.location = "deck"
 
         if self.type == "cryptid":
             self.starting_hp = details["hp"]
@@ -65,6 +66,7 @@ class Card(object):
             self.inf_summon = details['influence']['summon_type']
             self.inf_damage = details['influence']['damage_type']
             self.inf_modifier = details['influence']['modifier']
+            self.playable = False
 
             # card statuses
             self.active_for = None
@@ -75,33 +77,35 @@ class Card(object):
     def __repr__(self):
         """Print information when print(self) is called."""
         if self.type == "cryptid":
-            return f"""----------------------------------
-Cryptid Card {self.card_id}: {self.name}.
-----------------------------------
-Class:        {self.cryptid_class}
-Level:        {self.summon_level}
-Health:       {self.current_hp} / {self.starting_hp}
-Attack:       {self.attack}
-Summon type:  {self.summon_type}
-Damage type:  {self.damage_type}
-Modifier:     {self.modifier}
-
-Alive:      {'False' if self.dead else 'True'}
-Stunned:    {'True' if self.stunned else 'False'}
-Summonable: {'True' if self.summonable else 'False'}
-----------------------------------
+            return f"""+--------------------------------+
+| CRYPTID #{str(self.card_id):3.3}: {self.name:16.16} |
++--------------------------------+
+|    Class:        {self.cryptid_class:10.10}    |
+|    Level:        {str(self.summon_level):10.10}    |
+|    Health:       {str(self.current_hp) + '/' + str(self.starting_hp):10.10}    |
+|    Attack:       {str(self.attack):13.13} |
+|    Summon type:  {self.summon_type:13.13} |
+|    Damage type:  {self.damage_type:13.13} |
+|    Modifier:     {self.modifier:13.13} |
+|                                |
+|    Alive:        {'False' if self.dead else 'True':13.13} |
+|    Stunned:      {'True' if self.stunned else 'False':13.13} |
+|    Summonable:   {'True' if self.summonable else 'False':13.13} |
+|    Location:     {self.location:13.13} |
++--------------------------------+
 """
         elif self.type == "magic":
-            return f"""----------------------------------
-Magic Card {self.card_id}: {self.name}.
-----------------------------------
-Class:        {self.magic_class}
-Level:        {self.magic_level}
-Influences:
-    Summon:    {self.inf_summon}
-    Damage:    {self.inf_damage}
-    Modifier:  {self.inf_modifier}
-----------------------------------
+            return f"""+--------------------------------+
+| MAGIC {str(self.card_id):3.3}: {self.name:19.19} |
++--------------------------------+
+|    Class:        {self.magic_class:10.10}    |
+|    Level:        {str(self.magic_level):10.10}    |
+|                                |
+|    Influences:                 |
+|        Summon:    {self.inf_summon if self.inf_summon is not None else "-":12.12} |
+|        Damage:    {self.inf_damage if self.inf_damage is not None else "-":12.12} |
+|        Modifier:  {self.inf_modifier if self.inf_modifier is not None else "-":12.12} |
++--------------------------------+
 """
 
     def receive_damage(self, damage: int) -> int:
@@ -128,16 +132,24 @@ Influences:
         # return the damage applied
         return int(dmg)
 
-    def summon(self):
+    def play_card(self):
         """Summon the card based on condition."""
         if True:
             self.summonable = True
+            self.playable = True
 
-    def play_card(self, turn_played):
+    def play_card(self, turn_played) -> object:
         """Play the card."""
         self.active = True
         self.turn_plyed = turn_played
         # note that update_on_turn will be called after this.
+        return self
+
+    def set_location(self, location) -> object:
+        """Set the location of the card."""
+        if location not in ["deck", "hand", "field", "magic", "discard"]:
+            raise ValueError(f"Unrecognised location: {location}.")
+        self.location = location
         return self
 
     def be_stunned(self, stunned_for_n_turns):
@@ -163,12 +175,14 @@ Influences:
         else:
             raise TypeError(f"Not a cryptid card, instead type {self.type}")
 
-    def is_summonable(self) -> bool:
-        """Check if cryptid is summonable."""
+    def is_playable(self) -> bool:
+        """Check if card is playable/summonable."""
         if self.type == "cryptid":
             return self.summonable
+        elif self.type == "magic":
+            return self.playble
         else:
-            raise TypeError(f"Not a cryptid card, instead type {self.type}")
+            raise TypeError(f"Unrecognised type: {self.type}")
 
     def update_on_turn_end(self, current_turn):
         """Update card statuses at the end of current turn."""
@@ -195,7 +209,15 @@ Influences:
                     else:
                         self.can_attack = True
 
+                    # !!! update summonable
+                    if True:
+                        self.summonable = True
+                    else:
+                        self.summonable = False
+
                 case "magic":
+                    # if
+
                     # if the magic card is active, reduce it's effect time
                     if self.active_for > 0:
                         self.active_for -= 1
@@ -203,3 +225,9 @@ Influences:
                         # if effect time has expired, set to not active.
                         self.active_for = None
                         self.active = False
+
+                    # !!! update playable
+                    if True:
+                        self.playable = True
+                    else:
+                        self.playable = False
